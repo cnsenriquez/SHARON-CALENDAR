@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sharon's Schedule</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#fdf6f0;--bg2:#fff9f5;--surface:#ffffff;
+  --border:#f0e0d0;--border2:#e8d0be;
+  --rose:#e8927c;--rose-light:#f5c4b8;--rose-deep:#d4705a;--blush:#f7ddd5;
+  --gold:#d4a96a;--gold-light:#fdf0d5;
+  --sage:#89b5a0;--sage-light:#d8f0e8;
+  --lav:#c4a8d4;--sky:#7bb8d8;
+  --text:#3d2b1f;--text2:#6b4a3a;--muted:#a08070;
+  --sh:rgba(180,100,80,.08);--sh2:rgba(180,100,80,.16);
+}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 600px 400px at 8% 15%,rgba(232,146,124,.11) 0%,transparent 60%),radial-gradient(ellipse 500px 400px at 92% 80%,rgba(196,168,212,.09) 0%,transparent 60%);pointer-events:none;z-index:0;}
+.app{max-width:1020px;margin:0 auto;padding:20px 14px 60px;position:relative;z-index:1;}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{from{opacity:0;transform:scale(.88) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+/* HEADER */
+header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
+.eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--rose);margin-bottom:3px;}
+.brand{font-family:'Playfair Display',serif;font-size:clamp(1.7rem,4vw,2.5rem);color:var(--text);line-height:1.1;}
+.brand em{font-style:italic;color:var(--rose);}
+.brand-sub{font-size:.78rem;color:var(--muted);margin-top:3px;}
+.floral{font-size:1.1rem;margin-top:6px;opacity:.45;letter-spacing:.3em;}
+.verse-banner{margin:12px auto 0;max-width:480px;background:linear-gradient(135deg,#fff8f2,#fdeee6);border:1px solid var(--rose-light);border-radius:18px;padding:10px 16px;display:flex;align-items:center;gap:9px;box-shadow:0 4px 14px rgba(232,146,124,.1);}
+.verse-q{font-family:'Playfair Display',serif;font-style:italic;font-size:.8rem;color:var(--text2);line-height:1.5;}
+.verse-r{font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rose);margin-top:2px;}
+
+/* TABS */
+.tabs-bar{display:flex;gap:3px;margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:4px;box-shadow:0 2px 10px var(--sh);flex-wrap:wrap;animation:fadeUp .5s .05s ease both;}
+.tab-btn{flex:1;min-width:70px;padding:8px 4px;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .2s;color:var(--muted);background:transparent;white-space:nowrap;}
+.tab-btn.active{background:linear-gradient(135deg,var(--rose),var(--rose-deep));color:#fff;box-shadow:0 3px 12px rgba(212,112,90,.35);}
+.tab-btn:not(.active):hover{background:var(--blush);color:var(--text2);}
+.tab-content{display:none;}
+.tab-content.active{display:block;animation:fadeUp .3s ease both;}
+
+/* CALENDAR TAB */
+.cal-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.month-nav{display:flex;align-items:center;gap:7px;}
+.month-lbl{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--text);min-width:180px;text-align:center;}
+.nav-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 2px 7px var(--sh);}
+.nav-btn:hover{background:var(--rose);border-color:var(--rose);color:#fff;transform:scale(1.08);}
+.today-btn{padding:6px 13px;border-radius:14px;border:1.5px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'Nunito',sans-serif;font-size:.75rem;font-weight:700;transition:all .2s;}
+.today-btn:hover{background:var(--blush);}
+.add-btn{background:linear-gradient(135deg,var(--rose),var(--rose-deep));color:#fff;border:none;padding:8px 16px;border-radius:16px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(212,112,90,.35);transition:all .2s;display:flex;align-items:center;gap:4px;}
+.add-btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(212,112,90,.45);}
+
+/* CALENDAR GRID */
+.cal-card{background:var(--surface);border-radius:22px;border:1px solid var(--border);box-shadow:0 6px 28px var(--sh);overflow:hidden;}
+.day-labels{display:grid;grid-template-columns:repeat(7,1fr);background:var(--blush);border-bottom:1px solid var(--border);}
+.day-lbl{text-align:center;padding:9px 4px;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rose-deep);}
+.day-lbl:first-child,.day-lbl:last-child{color:var(--rose);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:6px;}
+.day-cell{min-height:68px;border-radius:10px;padding:5px 5px 3px;cursor:pointer;transition:all .18s cubic-bezier(.34,1.56,.64,1);border:1.5px solid transparent;background:var(--bg2);position:relative;overflow:hidden;}
+.day-cell:hover{background:var(--blush);border-color:var(--rose-light);transform:scale(1.05);box-shadow:0 4px 12px var(--sh2);z-index:2;}
+.day-cell.other-month{opacity:.25;}
+.day-cell.today{background:linear-gradient(135deg,#fff0ec,#ffe4de);border-color:var(--rose);box-shadow:0 0 0 2px rgba(232,146,124,.15);}
+.day-cell.selected{background:linear-gradient(135deg,#fef9f0,#fdf0e0);border-color:var(--gold);}
+.day-num{font-size:.75rem;font-weight:700;color:var(--text2);width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%;}
+.today .day-num{background:var(--rose);color:#fff;box-shadow:0 2px 6px rgba(232,146,124,.45);}
+.chip{margin-top:2px;font-size:.55rem;padding:1px 4px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;line-height:1.6;}
+.c0{background:#fde8e3;color:#c45a45;}.c1{background:#fdf0d5;color:#9a6a20;}.c2{background:#d8f0e8;color:#2d7a5a;}.c3{background:#ecdff5;color:#7a4a9a;}.c4{background:#d5e8f8;color:#2a5a8a;}
+.chip-xl{background:#fdeee6;color:#c45a45;}
+.chip-done{background:#f0f0f0;color:#aaa;text-decoration:line-through;}
+.more-chip{font-size:.52rem;color:var(--muted);font-weight:600;margin-top:1px;}
+@media(max-width:600px){
+  .day-cell{min-height:46px;padding:3px 2px;}
+  .chip{display:none;}
+  .day-cell.has-ev::after{content:'';display:block;width:4px;height:4px;border-radius:50%;background:var(--rose);margin:2px auto 0;}
+}
+
+/* MONTH SUMMARY (below calendar) */
+.month-summary{margin-top:14px;background:var(--surface);border-radius:20px;border:1px solid var(--border);box-shadow:0 4px 20px var(--sh);overflow:hidden;}
+.ms-header{background:linear-gradient(135deg,var(--blush),#fdeee6);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;}
+.ms-title{font-family:'Playfair Display',serif;font-size:1rem;color:var(--text);}
+.ms-title::before{content:'🌸 ';}
+.ms-body{padding:6px 0;}
+.ms-day-row{padding:10px 18px;border-bottom:1px dashed var(--border);display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:all .18s;}
+.ms-day-row:last-child{border-bottom:none;}
+.ms-day-row:hover{background:var(--bg2);}
+.ms-date-col{min-width:90px;flex-shrink:0;}
+.ms-date-num{font-family:'Playfair Display',serif;font-size:.96rem;font-weight:600;color:var(--text);}
+.ms-date-day{font-size:.64rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.ms-today-badge{display:inline-block;background:var(--rose);color:#fff;font-size:.56rem;font-weight:700;padding:1px 5px;border-radius:6px;margin-left:4px;letter-spacing:.05em;vertical-align:middle;}
+.ms-events-col{flex:1;min-width:0;}
+.ms-xl-item{background:var(--gold-light);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:7px 10px;margin-bottom:4px;font-size:.78rem;color:var(--text2);line-height:1.6;white-space:pre-line;cursor:pointer;}
+.ms-xl-item .ms-xl-title{font-weight:700;font-size:.8rem;color:var(--text);margin-bottom:2px;}
+.ms-user-item{background:var(--bg2);border-left:3px solid var(--rose);border-radius:0 8px 8px 0;padding:6px 10px;margin-bottom:4px;font-size:.78rem;color:var(--text2);line-height:1.5;cursor:pointer;transition:all .15s;position:relative;}
+.ms-user-item:hover{background:var(--blush);}
+.ms-user-item.done-item{opacity:.55;}
+.ms-user-item.done-item .ms-ui-title{text-decoration:line-through;color:var(--muted);}
+.ms-ui-title{font-weight:700;font-size:.8rem;color:var(--text);}
+.ms-ui-time{font-size:.68rem;color:var(--muted);}
+.ms-ui-notes{font-style:italic;font-size:.72rem;color:var(--text2);margin-top:1px;}
+.ms-edit-btn{position:absolute;top:5px;right:5px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:2px 5px;border-radius:6px;opacity:0;transition:opacity .15s;}
+.ms-user-item:hover .ms-edit-btn{opacity:1;}
+.ms-edit-btn:hover{background:var(--blush);color:var(--rose-deep);}
+.ms-add-day{font-size:.68rem;color:var(--muted);display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border:1px dashed var(--border2);border-radius:8px;cursor:pointer;margin-top:3px;transition:all .15s;}
+.ms-add-day:hover{background:var(--blush);color:var(--rose-deep);border-color:var(--rose-light);}
+.no-ms-events{color:var(--muted);font-size:.76rem;font-style:italic;}
+.xl-edit-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.7rem;padding:2px 5px;border-radius:5px;transition:all .15s;margin-left:4px;}
+.xl-edit-btn:hover{background:var(--blush);color:var(--rose-deep);}
+
+/* SUMMARY TAB */
+.sum-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.sec-title{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--text);}
+.sec-title em{font-style:italic;color:var(--rose);}
+.filter-row{display:flex;gap:4px;flex-wrap:wrap;}
+.filter-btn{padding:5px 12px;border-radius:13px;border:1.5px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-family:'Nunito',sans-serif;font-size:.73rem;font-weight:700;transition:all .2s;}
+.filter-btn.active{background:var(--rose);border-color:var(--rose);color:#fff;}
+.filter-btn:hover:not(.active){background:var(--blush);}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;text-align:center;box-shadow:0 3px 10px var(--sh);}
+.stat-num{font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--rose);line-height:1;}
+.stat-lbl{font-size:.64rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 4px 18px var(--sh);}
+.sum-group{border-bottom:1px solid var(--border);}
+.sum-group:last-child{border-bottom:none;}
+.sum-dh{background:linear-gradient(135deg,var(--blush),#fdeee6);padding:9px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+.sum-dh:hover{background:var(--blush);}
+.sum-dlbl{font-family:'Playfair Display',serif;font-size:.88rem;color:var(--text);}
+.sum-dcnt{font-size:.68rem;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:4px;}
+.tog{font-size:.68rem;transition:transform .2s;display:inline-block;}
+.tog.open{transform:rotate(180deg);}
+.sum-items{padding:5px 16px 8px;}
+.sum-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--border);cursor:pointer;transition:all .18s;}
+.sum-row:last-child{border-bottom:none;}
+.sum-row:hover{transform:translateX(3px);}
+.sum-row.done .s-title{text-decoration:line-through;color:var(--muted);}
+.s-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.s-title{flex:1;font-weight:600;font-size:.82rem;}
+.s-time{font-size:.68rem;color:var(--muted);}
+.s-chk{width:19px;height:19px;border-radius:50%;border:1.5px solid var(--border2);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.58rem;transition:all .2s;color:var(--muted);flex-shrink:0;}
+.s-chk:hover,.sum-row.done .s-chk{border-color:var(--sage);background:var(--sage);color:#fff;}
+.no-sum{color:var(--muted);text-align:center;padding:32px;font-style:italic;font-size:.84rem;}
+.no-sum span{display:block;font-size:1.6rem;margin-bottom:6px;opacity:.4;}
+
+/* DRIVERS TAB */
+.drv-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.drv-sort-note{font-size:.72rem;color:var(--muted);}
+.drv-cards{display:flex;flex-direction:column;gap:12px;}
+.drv-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 3px 14px var(--sh);}
+.drv-date-hdr{background:linear-gradient(135deg,var(--blush),#fdeee6);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+.drv-date-hdr:hover{background:var(--blush);}
+.drv-date-lbl{font-family:'Playfair Display',serif;font-size:.9rem;color:var(--text);}
+.drv-date-ctrl{display:flex;align-items:center;gap:6px;}
+.drv-del-date{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.72rem;padding:2px 6px;border-radius:6px;transition:all .15s;}
+.drv-del-date:hover{background:var(--blush);color:var(--rose-deep);}
+.drv-rows{padding:6px 0;}
+.drv-row{display:flex;gap:10px;align-items:flex-start;padding:8px 14px;border-bottom:1px dashed var(--border);position:relative;}
+.drv-row:last-child{border-bottom:none;}
+.drv-badge{background:var(--blush);color:var(--rose-deep);font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:8px;white-space:nowrap;flex-shrink:0;}
+.drv-car-tag{font-size:.68rem;color:var(--muted);background:var(--bg2);padding:2px 7px;border-radius:7px;white-space:nowrap;flex-shrink:0;}
+.drv-errand{font-size:.76rem;color:var(--text2);line-height:1.6;flex:1;white-space:pre-line;}
+.drv-row-btns{display:flex;gap:3px;flex-shrink:0;}
+.drv-edit-row,.drv-del-row{background:none;border:none;cursor:pointer;font-size:.72rem;padding:2px 5px;border-radius:6px;color:var(--muted);transition:all .15s;}
+.drv-edit-row:hover{background:var(--gold-light);color:var(--gold);}
+.drv-del-row:hover{background:var(--blush);color:var(--rose-deep);}
+.drv-add-entry{display:flex;align-items:center;gap:5px;padding:8px 14px;cursor:pointer;color:var(--muted);font-size:.74rem;border-top:1px dashed var(--border);transition:all .15s;}
+.drv-add-entry:hover{background:var(--bg2);color:var(--rose-deep);}
+.no-drv{color:var(--muted);text-align:center;padding:32px;font-style:italic;font-size:.84rem;}
+
+/* EASYTRIP / AUTOSWEEP TABS */
+.rfid-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.rfid-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;}
+.rfid-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 4px 14px var(--sh);transition:all .2s;position:relative;}
+.rfid-card:hover{transform:translateY(-2px);box-shadow:0 7px 22px var(--sh2);}
+.rfid-plate{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:600;color:var(--text);margin-bottom:3px;}
+.rfid-date{font-size:.66rem;color:var(--muted);margin-bottom:10px;}
+.rfid-bal{font-family:'Playfair Display',serif;font-size:1.9rem;line-height:1;margin-bottom:2px;}
+.rfid-bal.high{color:var(--sage);}.rfid-bal.mid{color:var(--gold);}.rfid-bal.low{color:var(--rose);}
+.rfid-bal-lbl{font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.rfid-detail{font-size:.72rem;color:var(--text2);margin-top:3px;}
+.rfid-detail span{font-weight:700;color:var(--text);}
+.rfid-edit-btn{position:absolute;top:12px;right:12px;background:var(--bg2);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:.68rem;padding:3px 8px;border-radius:8px;font-family:'Nunito',sans-serif;transition:all .15s;}
+.rfid-edit-btn:hover{background:var(--blush);color:var(--rose-deep);}
+
+/* MODALS */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(60,25,15,.32);backdrop-filter:blur(5px);z-index:200;align-items:center;justify-content:center;padding:14px;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--surface);border-radius:22px;padding:24px 20px;width:100%;max-width:430px;box-shadow:0 20px 60px rgba(180,80,60,.2);border:1px solid var(--border);animation:popIn .25s cubic-bezier(.34,1.56,.64,1) both;position:relative;overflow:hidden;max-height:90vh;overflow-y:auto;}
+.modal::before{content:'🌷';position:absolute;top:-14px;right:14px;font-size:4rem;opacity:.04;pointer-events:none;}
+.modal h2{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--text);margin-bottom:2px;}
+.modal h2 em{font-style:italic;color:var(--rose);}
+.modal-sub{font-size:.73rem;color:var(--muted);margin-bottom:16px;}
+.frow{margin-bottom:12px;}
+.frow label{display:block;font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+.frow input,.frow textarea,.frow select{width:100%;background:var(--bg);border:1.5px solid var(--border2);color:var(--text);padding:8px 11px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:.84rem;outline:none;transition:all .2s;}
+.frow input:focus,.frow textarea:focus,.frow select:focus{border-color:var(--rose);background:#fff;box-shadow:0 0 0 3px rgba(232,146,124,.1);}
+.frow textarea{resize:vertical;min-height:60px;}
+.color-lbl{font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px;}
+.swatches{display:flex;gap:7px;margin-bottom:14px;}
+.swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .18s;box-shadow:0 2px 5px rgba(0,0,0,.1);}
+.swatch:hover{transform:scale(1.15);}
+.swatch.active{border-color:var(--text);transform:scale(1.2);}
+.mfooter{display:flex;gap:7px;}
+.mfooter button{flex:1;padding:9px;border-radius:12px;font-family:'Nunito',sans-serif;font-size:.84rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-cancel{background:var(--bg2);border:1.5px solid var(--border2);color:var(--text2);}
+.btn-cancel:hover{background:var(--blush);}
+.btn-save{background:linear-gradient(135deg,var(--rose),var(--rose-deep));border:none;color:#fff;box-shadow:0 4px 12px rgba(212,112,90,.38);}
+.btn-save:hover{transform:translateY(-2px);}
+
+/* DETAIL MODAL */
+.detail-modal{background:var(--surface);border-radius:22px;padding:22px 20px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(180,80,60,.2);border:1px solid var(--border);animation:popIn .25s cubic-bezier(.34,1.56,.64,1) both;max-height:90vh;overflow-y:auto;}
+.det-bar{width:100%;height:4px;border-radius:4px;margin-bottom:16px;}
+.det-title{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--text);margin-bottom:2px;}
+.det-title.done-t{text-decoration:line-through;color:var(--muted);}
+.det-date{font-size:.74rem;color:var(--muted);margin-bottom:12px;font-weight:500;}
+.det-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
+.det-icon{font-size:.9rem;width:16px;flex-shrink:0;margin-top:1px;}
+.det-val{font-size:.82rem;color:var(--text2);font-weight:500;}
+.det-notes{background:var(--blush);border-radius:10px;padding:10px 12px;font-size:.8rem;color:var(--text2);font-style:italic;line-height:1.6;margin-bottom:14px;white-space:pre-line;}
+.det-actions{display:flex;gap:7px;flex-wrap:wrap;}
+.det-actions button{flex:1;min-width:75px;padding:8px;border-radius:11px;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;border:none;}
+.btn-done-d{background:linear-gradient(135deg,var(--sage),#6da090);color:#fff;}
+.btn-done-d:hover{transform:translateY(-1px);}
+.btn-done-d.undone{background:linear-gradient(135deg,#c8c8c8,#b0b0b0);}
+.btn-edit-d{background:linear-gradient(135deg,var(--gold),#c0904a);color:#fff;}
+.btn-edit-d:hover{transform:translateY(-1px);}
+.btn-del-d{background:var(--blush);border:1px solid var(--rose-light) !important;color:var(--rose-deep);}
+.btn-del-d:hover{background:var(--rose);color:#fff;}
+.btn-close-d{background:var(--bg2);border:1.5px solid var(--border2) !important;color:var(--text2);}
+.btn-close-d:hover{background:var(--blush);}
+
+/* XL EDIT MODAL */
+.xl-modal{max-width:480px;}
+
+/* PETAL DECO */
+.petal{position:fixed;pointer-events:none;font-size:.9rem;opacity:0;animation:floatP 13s ease-in-out infinite;z-index:0;}
+@keyframes floatP{0%{opacity:0;transform:translateY(0) rotate(0deg)}10%{opacity:.15}90%{opacity:.05}100%{opacity:0;transform:translateY(-75vh) rotate(360deg)}}
+
+/* MONITORING TAB */
+.mon-legend { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.mon-leg-item { display:flex; align-items:center; gap:5px; font-size:.7rem; font-weight:700; color:var(--text2); cursor:pointer; padding:4px 10px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface); transition:all .15s; }
+.mon-leg-item:hover { background:var(--blush); }
+.mon-leg-item.active { color:#fff; border-color:transparent; }
+.mon-leg-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.mon-filters { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:14px; }
+.mon-fbtn { padding:5px 12px; border-radius:12px; border:1.5px solid var(--border2); background:var(--surface); font-family:'Nunito',sans-serif; font-size:.73rem; font-weight:700; cursor:pointer; color:var(--text2); transition:all .2s; }
+.mon-fbtn.active { background:var(--rose); border-color:var(--rose); color:#fff; }
+.mon-fbtn:hover:not(.active) { background:var(--blush); }
+.mon-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; overflow:hidden; box-shadow:0 4px 16px var(--sh); margin-bottom:12px; }
+.mon-date-hdr { background:linear-gradient(135deg,var(--blush),#fdeee6); padding:10px 16px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+.mon-date-hdr:hover { background:var(--blush); }
+.mon-date-lbl { font-family:'Playfair Display',serif; font-size:.9rem; color:var(--text); }
+.mon-date-dow { font-size:.68rem; color:var(--muted); font-weight:700; text-transform:uppercase; margin-left:4px; }
+.mon-rows { padding:4px 0; }
+.mon-row { display:flex; gap:10px; align-items:flex-start; padding:8px 16px; border-bottom:1px dashed var(--border); transition:all .15s; }
+.mon-row:last-child { border-bottom:none; }
+.mon-row:hover { background:var(--bg2); }
+.mon-cat-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+.mon-row-info { flex:1; }
+.mon-row-title { font-size:.82rem; font-weight:700; color:var(--text); }
+.mon-row-notes { font-size:.72rem; color:var(--muted); margin-top:1px; font-style:italic; }
+.mon-cat-badge { font-size:.62rem; font-weight:700; padding:2px 7px; border-radius:7px; flex-shrink:0; }
+
+
+/* SUMMARY MONTH FILTERS */
+.sum-month-filters { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:14px; }
+.sum-mfbtn { padding:5px 12px; border-radius:12px; border:1.5px solid var(--border2); background:var(--surface); font-family:'Nunito',sans-serif; font-size:.73rem; font-weight:700; cursor:pointer; color:var(--text2); transition:all .2s; }
+.sum-mfbtn.active { background:var(--rose); border-color:var(--rose); color:#fff; }
+.sum-mfbtn:hover:not(.active) { background:var(--blush); }
+/* MONTH GROUP HEADER */
+.sum-month-hdr { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:linear-gradient(135deg,rgba(232,146,124,.18),rgba(212,169,106,.12)); border-radius:14px; margin-bottom:6px; margin-top:12px; cursor:pointer; }
+.sum-month-hdr:first-child { margin-top:0; }
+.sum-month-title { font-family:'Playfair Display',serif; font-size:1.05rem; color:var(--text); }
+.sum-month-meta { font-size:.68rem; color:var(--muted); font-weight:700; display:flex; align-items:center; gap:6px; }
+.sum-done-pill { background:var(--sage-light); color:#2d7a5a; padding:2px 8px; border-radius:8px; font-size:.62rem; font-weight:700; }
+.sum-month-body { margin-bottom:4px; }
+
+
+/* CALENDAR SEARCH */
+.cal-search-row { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.cal-search-wrap { flex:1; position:relative; }
+.cal-search-wrap input { width:100%; padding:9px 14px 9px 36px; border-radius:14px; border:1.5px solid var(--border2); background:var(--surface); font-family:'Nunito',sans-serif; font-size:.82rem; color:var(--text); outline:none; transition:border .2s; box-sizing:border-box; }
+.cal-search-wrap input:focus { border-color:var(--rose); }
+.cal-search-wrap::before { content:'🔍'; position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:.82rem; pointer-events:none; }
+.cal-search-clear { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--muted); font-size:.9rem; padding:2px 4px; display:none; }
+.cal-search-results { background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:0 6px 24px var(--sh); overflow:hidden; margin-top:6px; }
+.cal-sr-item { display:flex; align-items:flex-start; gap:10px; padding:10px 14px; border-bottom:1px dashed var(--border); cursor:pointer; transition:background .15s; }
+.cal-sr-item:last-child { border-bottom:none; }
+.cal-sr-item:hover { background:var(--blush); }
+.cal-sr-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+.cal-sr-info { flex:1; }
+.cal-sr-title { font-size:.82rem; font-weight:700; color:var(--text); }
+.cal-sr-date { font-size:.7rem; color:var(--muted); margin-top:1px; }
+.cal-sr-none { padding:18px; text-align:center; color:var(--muted); font-size:.82rem; font-style:italic; }
+
+
+/* DRIVER MODAL — MULTI-PERSON */
+.drv-people-list { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+.drv-person-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; background:var(--bg2); border-radius:12px; padding:10px 12px 4px; position:relative; }
+.drv-person-row .frow { margin-bottom:6px; }
+.drv-person-row .frow label { font-size:.68rem; }
+.drv-person-row .frow input, .drv-person-row .frow textarea { font-size:.78rem; padding:7px 10px; }
+.drv-person-errand { grid-column:1/-1; }
+.drv-person-num { font-size:.68rem; font-weight:800; color:var(--rose); margin-bottom:6px; grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; }
+.drv-rm-btn { background:none; border:none; cursor:pointer; color:var(--muted); font-size:.85rem; padding:0 2px; }
+.drv-rm-btn:hover { color:#c0392b; }
+.drv-add-person-btn { width:100%; padding:9px; border:2px dashed var(--border2); border-radius:12px; background:none; cursor:pointer; color:var(--rose); font-family:'Nunito',sans-serif; font-size:.8rem; font-weight:700; transition:all .2s; }
+.drv-add-person-btn:hover { background:var(--blush); border-color:var(--rose); }
+
+
+/* DRIVER DONE STATE */
+.drv-card.day-done .drv-date-hdr { background:linear-gradient(135deg,#e8f5e9,#f1f8e9); }
+.drv-card.day-done .drv-date-lbl { text-decoration:line-through; color:var(--muted); }
+.drv-done-chk { width:26px; height:26px; border-radius:50%; border:2px solid var(--border2); background:var(--surface); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.82rem; flex-shrink:0; transition:all .2s; }
+.drv-done-chk:hover { border-color:var(--sage); background:var(--sage-light,#e8f5e9); }
+.drv-done-chk.checked { background:var(--sage,#6da090); border-color:var(--sage,#6da090); color:#fff; }
+
+/* PDF MODAL */
+.pdf-modal-bg { display:none; position:fixed; inset:0; background:rgba(60,25,15,.4); backdrop-filter:blur(6px); z-index:300; align-items:center; justify-content:center; padding:16px; }
+.pdf-modal-bg.open { display:flex; }
+.pdf-modal { background:var(--surface); border-radius:22px; padding:28px 26px 22px; max-width:380px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,.18); }
+.pdf-modal h2 { font-family:'Playfair Display',serif; font-size:1.15rem; color:var(--text); margin:0 0 6px; }
+.pdf-modal h2 em { color:var(--rose); font-style:italic; }
+.pdf-modal-sub { font-size:.75rem; color:var(--muted); margin-bottom:18px; }
+.pdf-month-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:18px; max-height:260px; overflow-y:auto; }
+.pdf-mbtn { padding:10px 12px; border-radius:12px; border:1.5px solid var(--border2); background:var(--surface); font-family:'Nunito',sans-serif; font-size:.8rem; font-weight:700; cursor:pointer; color:var(--text2); transition:all .2s; text-align:left; }
+.pdf-mbtn:hover { background:var(--blush); border-color:var(--rose); }
+.pdf-mbtn.active { background:var(--rose); border-color:var(--rose); color:#fff; }
+.pdf-footer { display:flex; gap:10px; }
+
+/* PRINT STYLES */
+@media print {
+  body > *:not(#printArea) { display:none !important; }
+  #printArea { display:block !important; font-family:'Times New Roman',serif; }
+  .print-title { font-size:18pt; font-weight:bold; margin-bottom:4pt; }
+  .print-sub { font-size:10pt; color:#666; margin-bottom:16pt; }
+  .print-day { margin-bottom:14pt; break-inside:avoid; }
+  .print-day-hdr { font-size:12pt; font-weight:bold; border-bottom:1pt solid #ccc; padding-bottom:3pt; margin-bottom:6pt; }
+  .print-done-badge { font-size:8pt; color:#2d7a5a; margin-left:6pt; font-weight:normal; }
+  .print-person { margin:4pt 0 4pt 10pt; font-size:10pt; }
+  .print-person-name { font-weight:bold; }
+  .print-person-car { color:#666; font-style:italic; }
+  .print-person-errand { margin-top:2pt; margin-left:8pt; white-space:pre-wrap; }
+}
+#printArea { display:none; }
+
+
+.pdf-type-btn { flex:1; padding:8px 6px; border-radius:11px; border:1.5px solid var(--border2); background:var(--surface); font-family:'Nunito',sans-serif; font-size:.75rem; font-weight:700; cursor:pointer; color:var(--text2); transition:all .2s; text-align:center; }
+.pdf-type-btn.active { background:var(--rose); border-color:var(--rose); color:#fff; }
+.pdf-type-btn:hover:not(.active) { background:var(--blush); }
+/* Print styles for schedules */
+.print-section-title { font-size:14pt; font-weight:bold; border-bottom:2pt solid #c4a8d4; padding-bottom:4pt; margin:16pt 0 10pt; color:#7a5c8a; }
+.print-xl-ev { margin:4pt 0 4pt 10pt; font-size:10pt; }
+.print-xl-title { font-weight:bold; }
+.print-xl-notes { margin-top:2pt; margin-left:8pt; color:#555; white-space:pre-wrap; font-style:italic; }
+.print-user-ev { margin:4pt 0 4pt 10pt; font-size:10pt; }
+.print-user-dot { display:inline-block; width:6pt; height:6pt; border-radius:50%; margin-right:4pt; vertical-align:middle; }
+.print-done-item .print-xl-title,
+.print-done-item .print-user-ev-title { text-decoration:line-through; color:#aaa; }
+
+
+.print-drv-block { margin:6pt 0 4pt 10pt; padding:4pt 0 4pt 8pt; border-left:2pt solid #e8a87c; }
+.print-drv-hdr { font-size:9pt; font-weight:700; color:#c07040; margin-bottom:3pt; }
+
+</style>
+</head>
+<body>
+<div class="petal" style="left:5%;animation-delay:0s;animation-duration:14s">🌸</div>
+<div class="petal" style="left:25%;animation-delay:5s;animation-duration:11s">🌺</div>
+<div class="petal" style="left:65%;animation-delay:9s;animation-duration:16s">🌸</div>
+<div class="petal" style="left:85%;animation-delay:2s;animation-duration:12s">🌷</div>
+
+<div class="app">
+  <header>
+    <div class="eyebrow">✦ Personal Planner 2026 ✦</div>
+    <h1 class="brand">Sharon's <em>Schedule</em></h1>
+    <p class="brand-sub">Your days, beautifully organized</p>
+    <div class="floral">🌸 🌺 🌷</div>
+    <div class="verse-banner">
+      <div style="font-size:1.2rem;flex-shrink:0">✝️</div>
+      <div>
+        <div class="verse-q">"Commit your work to the Lord, and your plans will be established."</div>
+        <div class="verse-r">Proverbs 16:3</div>
+      </div>
+    </div>
+  </header>
+
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <div class="tabs-bar" style="margin-bottom:0;flex:1;min-width:0">
+      <button class="tab-btn active" onclick="switchTab('calendar',this)">📅 Calendar</button>
+      <button class="tab-btn" onclick="switchTab('summary',this)">📋 Summary</button>
+      <button class="tab-btn" onclick="switchTab('drivers',this)">🚗 Drivers</button>
+      <button class="tab-btn" onclick="switchTab('easytrip',this)">🛣️ Easytrip</button>
+      <button class="tab-btn" onclick="switchTab('autosweep',this)">🏎️ Autosweep</button>
+      <button class="tab-btn" onclick="switchTab('monitoring',this)">📊 Monitoring</button>
+    </div>
+    <button onclick="openPdfModal()" style="flex-shrink:0;padding:10px 18px;border-radius:13px;border:none;background:linear-gradient(135deg,#7bb8d8,#5a9abf);color:#fff;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(90,154,191,.35);white-space:nowrap;transition:all .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">🖨 PDF</button>
+  </div>
+
+  <!-- CALENDAR TAB -->
+  <div class="tab-content active" id="tab-calendar">
+    <div class="cal-topbar">
+      <div class="month-nav">
+        <button class="nav-btn" onclick="prevMonth()">‹</button>
+        <span class="month-lbl" id="monthLbl"></span>
+        <button class="nav-btn" onclick="nextMonth()">›</button>
+      </div>
+      <button class="today-btn" onclick="goToday()">✦ Today</button>
+      <button class="add-btn" onclick="openAddModal(null,null)">＋ Add Schedule</button>
+    </div>
+    <div class="cal-search-row">
+      <div class="cal-search-wrap">
+        <input type="text" id="calSearchInput" placeholder="Search events…" oninput="runCalSearch(this.value)" autocomplete="off"/>
+        <button class="cal-search-clear" id="calSearchClear" onclick="clearCalSearch()">✕</button>
+      </div>
+    </div>
+    <div id="calSearchResults" style="display:none"></div>
+    <div class="cal-card">
+      <div class="day-labels">
+        <div class="day-lbl">Sun</div><div class="day-lbl">Mon</div>
+        <div class="day-lbl">Tue</div><div class="day-lbl">Wed</div>
+        <div class="day-lbl">Thu</div><div class="day-lbl">Fri</div>
+        <div class="day-lbl">Sat</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+    <div class="month-summary">
+      <div class="ms-header">
+        <div class="ms-title" id="msSectionTitle">Month Summary</div>
+        <button class="add-btn" style="font-size:.72rem;padding:6px 12px" onclick="openAddModal(null,null)">＋ Add</button>
+      </div>
+      <div class="ms-body" id="msSummaryBody"></div>
+    </div>
+  </div>
+
+  <!-- SUMMARY TAB -->
+  <div class="tab-content" id="tab-summary">
+    <div class="sum-header">
+      <div class="sec-title">My <em>Schedules</em></div>
+      <button class="add-btn" onclick="openAddModal(null,null)">&#xFF0B; Add Schedule</button>
+    </div>
+    <div class="stats-row" id="statsRow"></div>
+    <div class="sum-month-filters" id="sumMonthFilters"></div>
+    <div id="summaryList"></div>
+  </div>
+
+  <!-- DRIVERS TAB -->
+  <div class="tab-content" id="tab-drivers">
+    <div class="drv-toolbar">
+      <div class="sec-title">Drivers' <em>Schedule</em></div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="add-btn" style="background:linear-gradient(135deg,#a0b89a,#7da075)" onclick="restoreDrvData()">↺ Restore</button>
+        <button class="add-btn" onclick="openAddDayModal()">＋ Add Day</button>
+      </div>
+    </div>
+    <div class="drv-sort-note" style="margin-bottom:10px;margin-left:2px">Latest first · Click a day to expand</div>
+    <div class="drv-cards" id="drvCards"></div>
+  </div>
+
+  <!-- EASYTRIP TAB -->
+  <div class="tab-content" id="tab-easytrip">
+    <div class="rfid-header">
+      <div class="sec-title">🛣️ <em>Easytrip</em></div>
+      <button class="add-btn" onclick="openRfidModal('easytrip',null)">＋ Add Plate</button>
+    </div>
+    <div class="rfid-grid" id="etGrid"></div>
+  </div>
+
+  <!-- AUTOSWEEP TAB -->
+  <div class="tab-content" id="tab-autosweep">
+    <div class="rfid-header">
+      <div class="sec-title">🏎️ <em>Autosweep</em></div>
+      <button class="add-btn" onclick="openRfidModal('autosweep',null)">＋ Add Plate</button>
+    </div>
+    <div class="rfid-grid" id="asGrid"></div>
+  </div>
+  <!-- MONITORING TAB -->
+  <div class="tab-content" id="tab-monitoring">
+    <div class="rfid-header">
+      <div class="sec-title">📊 <em>Regular Monitoring</em></div>
+      <div style="font-size:.75rem;color:var(--muted)">2026 schedules & reminders from the monitoring doc</div>
+    </div>
+    <!-- LEGEND -->
+    <div class="mon-legend" id="monLegend"></div>
+    <!-- MONTH FILTER -->
+    <div class="mon-filters" id="monFilters"></div>
+    <!-- LIST -->
+    <div id="monList"></div>
+  </div>
+</div>
+
+<!-- ADD/EDIT SCHEDULE MODAL -->
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeAddModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="mHead">New <em>Schedule</em></h2>
+    <div class="modal-sub" id="mSub"></div>
+    <div class="frow"><label>Title *</label><input type="text" id="evTitle" placeholder="e.g. Meeting, appointment…"/></div>
+    <div class="frow"><label>Date</label><input type="date" id="evDate"/></div>
+    <div class="frow"><label>Time</label><input type="time" id="evTime"/></div>
+    <div class="frow"><label>Notes</label><textarea id="evNotes" placeholder="Details or reminders…"></textarea></div>
+    <div><div class="color-lbl">Color Tag</div><div class="swatches" id="swatches"></div></div>
+    <div class="mfooter">
+      <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+      <button class="btn-save" onclick="saveSchedule()">Save ✦</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-bg" id="detailBg" onclick="if(event.target===this)closeDetail()">
+  <div class="detail-modal" onclick="event.stopPropagation()">
+    <div class="det-bar" id="detBar"></div>
+    <div class="det-title" id="detTitle"></div>
+    <div class="det-date" id="detDate"></div>
+    <div id="detTimeRow" class="det-row" style="display:none"><div class="det-icon">⏰</div><div class="det-val" id="detTimeVal"></div></div>
+    <div id="detNotes" class="det-notes" style="display:none"></div>
+    <div class="det-actions">
+      <button class="btn-done-d" id="detDoneBtn" onclick="toggleDetailDone()">✓ Mark Done</button>
+      <button class="btn-edit-d" onclick="editFromDetail()">✏️ Edit</button>
+      <button class="btn-del-d" onclick="deleteFromDetail()">🗑 Delete</button>
+      <button class="btn-close-d" onclick="closeDetail()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXCEL EVENT EDIT MODAL -->
+<div class="modal-bg" id="xlModalBg" onclick="if(event.target===this)closeXlModal()">
+  <div class="modal xl-modal" onclick="event.stopPropagation()">
+    <h2>Edit <em>Excel Event</em></h2>
+    <div class="modal-sub" id="xlModalSub"></div>
+    <div class="frow"><label>Title (short)</label><input type="text" id="xlTitle" placeholder="Short title for calendar"/></div>
+    <div class="frow"><label>Full Details</label><textarea id="xlDetails" placeholder="Full event details…" style="min-height:100px"></textarea></div>
+    <div class="mfooter">
+      <button class="btn-cancel" onclick="closeXlModal()">Cancel</button>
+      <button class="btn-save" onclick="saveXlEdit()">Save ✦</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRIVER MODAL — per day, multiple people -->
+<div class="modal-bg" id="drvModalBg" onclick="if(event.target===this)closeDrvModal()">
+  <div class="modal" style="max-width:520px;max-height:88vh;overflow-y:auto" onclick="event.stopPropagation()">
+    <h2 id="drvMHead">Add <em>Driver Schedule</em></h2>
+    <div class="modal-sub" id="drvMSub"></div>
+    <div class="frow" style="margin-bottom:14px"><label>Date *</label><input type="date" id="drvDate" oninput="updateDrvModalTitle()"/></div>
+    <div id="drvPeopleList" class="drv-people-list"></div>
+    <button class="drv-add-person-btn" onclick="addDrvPerson()">＋ Add Person</button>
+    <div class="mfooter" style="margin-top:14px">
+      <button class="btn-cancel" onclick="closeDrvModal()">Cancel</button>
+      <button class="btn-save" onclick="saveDrvDay()">Save Day ✦</button>
+    </div>
+  </div>
+</div>
+
+<!-- RFID MODAL -->
+<div class="modal-bg" id="rfidModalBg" onclick="if(event.target===this)closeRfidModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2 id="rfidMHead">Edit <em>RFID Entry</em></h2>
+    <div class="modal-sub" id="rfidMSub"></div>
+    <div class="frow"><label>Plate Number *</label><input type="text" id="rfidPlate" placeholder="e.g. NIU 4271"/></div>
+    <div class="frow"><label>Balance (₱)</label><input type="number" id="rfidBal" placeholder="0.00" step="0.01"/></div>
+    <div class="frow"><label>Date / As Of</label><input type="text" id="rfidDate" placeholder="AS OF JANUARY 1, 2026"/></div>
+    <div id="rfidEtFields">
+      <div class="frow"><label>Account Number</label><input type="text" id="rfidAcct"/></div>
+      <div class="frow"><label>Username</label><input type="text" id="rfidUser"/></div>
+    </div>
+    <div id="rfidAsFields" style="display:none">
+      <div class="frow"><label>Card Number</label><input type="text" id="rfidCard"/></div>
+      <div class="frow"><label>Account Number</label><input type="text" id="rfidAcct2"/></div>
+      <div class="frow"><label>Email</label><input type="text" id="rfidEmail"/></div>
+    </div>
+    <div class="mfooter">
+      <button class="btn-cancel" onclick="closeRfidModal()">Cancel</button>
+      <button class="btn-save" onclick="saveRfid()">Save ✦</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+// ═══════════════════ CONSTANTS & STATE ═══════════════════
+const COLORS = ['#e8927c','#d4a96a','#89b5a0','#c4a8d4','#7bb8d8'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS_F = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAYS_S = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const TODAY  = new Date();
+
+let vYear = 2026, vMonth = TODAY.getFullYear()===2026 ? TODAY.getMonth() : 0;
+let selColor = 0;
+let editKey = null, editIdx = null, detKey = null, detIdx = null;
+let xlEditKey = null;
+let drvEditIdx = null; // index in drvData array (after sort)
+let rfidType = null, rfidEditPlate = null;
+
+// ─── PERSISTENT DATA ───
+// ── Firebase config ──
+const firebaseConfig = {
+  apiKey: "AIzaSyAygaQEDQIT6J9gQb1RWX4fd0NgE0CaWLk",
+  authDomain: "sharon-calendar.firebaseapp.com",
+  projectId: "sharon-calendar",
+  storageBucket: "sharon-calendar.firebasestorage.app",
+  messagingSenderId: "547746715437",
+  appId: "1:547746715437:web:3f3906733de8592522a5a4"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const DOC_REF = db.collection('sharon').doc('data');
+
+// ── localStorage fallback helpers (used during load before Firestore responds) ──
+function loadData(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    if (!v) return fallback;
+    const parsed = JSON.parse(v);
+    if (key === 'sharon_drv' && Array.isArray(parsed) && parsed.length === 0 && Array.isArray(fallback) && fallback.length > 0) return fallback;
+    return parsed;
+  } catch(e) { return fallback; }
+}
+function saveData(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
+
+// ── Firestore save (debounced) ──
+let _saveTimer = null;
+function saveToFirestore() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(()=>{
+    DOC_REF.set({
+      userEvs, xlEvs, xlDone, drvData, etData, asData,
+      updatedAt: new Date().toISOString()
+    }).catch(e=>console.warn('Firestore save failed:', e));
+  }, 800);
+}
+
+// User schedule events: {dateKey: [{title,time,notes,color,done}]}
+let userEvs = loadData('sharon_v4', {});
+
+// Excel calendar events (editable overrides)
+const XL_BASE = {"2026-01-01": "NEW YEAR 🎆\nNo schedule si Boss Paul – pero may pinuntahan as per Kuya Benjie", "2026-01-02": "THANKS GIVING PARTY 🎆\nUmattend sina Boss Paul & Sir Joshua", "2026-01-03": "5:30 pm puntang Parañaque si Boss Paul", "2026-01-04": "Boss Paul – Church – Worship Leader\n\n*Joshua’s Birthday 🎂", "2026-01-05": "*Boss Paul – Office\n*Sir Jay report – di na tuloy- tomorrow na lang", "2026-01-06": "*Boss Paul – Office\n*7 am – Sir Joshua sa Office\n*4pm – alis si Sir Philip sa Office para sunduin sa NAIA T3 si Mr Shiyin-Kuya Rey driver\n*Sir Jay Report and  Sir Jose & Sir Jessie Report", "2026-01-07": "*Boss Paul – Office\n*7:30 am – sa 5th Ave na si Sir Joshua –message na lang pauwi\n*Sabay si Sir Philip kina Mr Yan papasok sa Office", "2026-01-08": "*Boss Paul – Office\n*7:30 am sa 5th Ave na si Sir Joshua–message na lang pauwi\n*9am alis si Mr yan dito sa Office then sundo si Sir Philip, puntang Immigration – Rey Driver", "2026-01-09": "*Boss Paul – Office\n*7:30 am sa 5th Ave na si Sir Joshua–message na lang pauwi\n*5pm – umalis sila Boss at Boss Paul dito sa Office", "2026-01-10": "*10:30 am – Change Oil  ng Grandia sa Toyota Balintawak look for Ms Dhea", "2026-01-11": "Boss Paul – Church\n\nRey – Day off", "2026-01-12": "*Sir Jay report - Done\n*7am –sabay si Sir Joshua kina Mr Yan at Mr Shiyin - Done\n* 8:30 am - Geely Change Oil sa Quezon Ave. – look for Ms Joy – Kuya Benjie - Done\n*Need ng Driver ni Ma’am Lily – 12nn alis na sa Office may meeting sa CGC – Done\n*6 pm sabay sina Boss Paul at Sir Joshua kay Boss pauwi", "2026-01-13": "*Sir Jose & Sir Jessie Report - Done\n*7am – 5TH Ave si Sir Joshua – dun din sundo - Done\n*Meeting Ma’am Mavic, Sir Philip, Sir Jessie, & Sir Marlon – Emission Testing – maybe tom.\n*Meeting din with Sir Richard - Done\n*Nagmeeting si Boss Paul with BDO 2 pm onwards - Done", "2026-01-14": "*5:30 am – alis na ng Pasolo si Boss Paul papuntang Parañaque pero may susunduin pa sa Mandaluyong – 8:30 am dapat nasa Parañaque na - Done\n*After Parañaque ay pupunta si Boss Paul sa Ikaneta – tindahan ng Surplus ng Blower\n*7:30am – umalis puntang 5TH Ave si Sir Joshua – dun din sundo\n*Matuloy sana meeting for Emission Testing –Done – Ma’am Mavic, Sir Philip, Sir Marlon, & Sir Jose\n*Ipadala sa repair shop – Keyboard ni Boss Paul – Done (Kuya Rey) pero disposable talaga try daw sa SM", "2026-01-15": "*7am – 5TH Ave si Sir Joshua \n\n*Benjie – Amapola kay Boss na driver\n\n*Nakareserve ang PQO 120 kay Kuya Andy – Whole day", "2026-01-16": "*Isuzu Pick Up Change Oil – Isuzu Edsa\n*7am – 5TH Ave si Sir Joshua", "2026-01-17": "Andrew's baby birthdy celebration. lunch time - punta sila Boss Paul", "2026-01-18": "Boss Paul – Church\n\nBenjie – Day Off", "2026-01-19": "*Sir Jay report – DONE\n*Errand ni Ma’am lily- pabayad sa Amilyar Cavite. If kaya pa ay Valenzuela din – DONE – maaga nakabalik si Kuya Jake galing Cavite,1pm\n*2pm – meeting with Engr. Paolo – Electrical Engineer – bali 3 sila as per Ma’am Virgie – then di na sumama sa meeting si Boss Paul although andito na siya sa Office before 2 pm - DONE\n* Every Monday starts on January 12, 2026 remind si Boss Paul regarding dun sa \n-Boiler 1 – Ma’am Echie\n-MC Global-Schd ng usap\n-Richard So -\n-Si Philip – kailan dadating Chinese Technician at parts ng Boiler - DONE", "2026-01-20": "*Sir Jose & Sir Jessie report - DONE\n- kasama bukas sa meeting yung incident report na binigay ni Ma’am Eden as per Boss Paul din, bigay din yung hard copy- DONE\n-Pagkatapos ng meeting ay tawagin din si Sir Jay pag-uusapan nila yung pagdagdag ng kettle saka ano yung mga kakailanganin. tawagin din sina Mr Yan at Sir Philip if needed. - DONE\n*7:30 am – Sir Joshua alis ng Pasolo hatid sa 5th Ave at 6pm – sundo ulit sa 5th Ave - DONE", "2026-01-21": "*7:30 am – Sir Joshua alis ng Pasolo hatid sa 5th Ave at 6pm – sundo ulit sa 5th Ave - DONE\n\n*Boss Paul – Office\n\n*Kuya Rey – tatapusin bukas yung sa Fortune - DONE", "2026-01-22": "*Benjie – 10 am Malabon – cancel pala dapat ito – kasi online si Yohan at si Kuya Rudy na lang pala \n*Every Monday & Thursday PQO 120 is reserved to Kuya Andy – whole day\n*Nag-paorder si Boss Paul ng 2 liter ng Philor ANAA Plant Growth Promoter – sa Pasolo ang deliver\n*Registered na sa Phil. Pharma & Healthcare Expo\n*Nagpapabili si Boss Paul sa FB Market ng 2 Itak at 1 palakol sa hardware – pinaPPR  daw toh as per Ma’am Lorie – nag-PR n a si Ma’am Eden", "2026-01-23": "*8 am - Red Innova Change Oil – Toyota Balintawak – Benjie - Done\n\n*Benjie – sundo si Ma’am Monique\n3:30pm sa school\n\n*Ipadeliver na yung 2 multi functional peeler knife ni Boss Paul – sa umaga  - Done\n\n*Bibiling aso si Boss Paul sa Bulacan - Done", "2026-01-24": "* 1st bday celebration of child of Sir Andrew and Ma’am Rebecca - Jan 24 lunchtime", "2026-01-25": "Boss Paul – Church – Worship Leader", "2026-01-26": "*Remind Boss Paul na bibisitahin yung COOKING AREA –pagkapasok pa lang ay remind na agad si Boss Paul – naremind ko pero di na siya nagpunta\n*Sir Jay report - DONE\n* Every Monday starts on January 12, 2026 remind si Boss Paul regarding dun sa \n-Boiler 1 – Ma’am Echie\n-MC Global – kailan kakausapin\n-Richard So – Ano ang kailangang tanggalin sa bubong at sino ang mga magtatanggal at magbabalik\n-Si Philip – kailan dadating Chinese Technician at parts ng Boiler\n*Every Mon. & Thurs. PQO 120 is reserved to Kuya Andy – whole day – di ginamit\n*Boss & Boss Paul – General Cleaning - DONE", "2026-01-28": "•        Philippine Pharma & Healthcare Expo 2026 — Jan 28–30\n3rd Edition Of Philippine Pharma And Healthcare Expo 2026\n Jan 28 - 30 2026\n 9:00 am - 7:00 pm – Registred na check the confirmation email and send to Boss Paul", "2026-01-29": "WTC Business Clubs: Engaging The Next Generation\n08:00AM - 09:00AM\nVIRTUAL ZOOM\n\n*Benjie – Amapola - Driver ni Boss\n\n*Every Monday & Thursday PQO 120 is reserved to Kuya Andy – whole day", "2026-01-30": "*Jan. 30 pa ang SOA – dito pa ichecheck if magkano sa pesos yung ticket ni Mr Yan", "2026-02-01": "*Boss Paul – Church\n\n*Need si Kuya Rey at Kuya Jake sa CGC Makati as per Ma’am Lily – Kuya Jake absent\n\n*Absent si Kuya Andy", "2026-02-02": "*Sir Jay report - DONE\n* Every Monday starts on January 12, 2026 remind si Boss Paul regarding dun sa \n-Boiler 1 – Ma’am Echie\n-MC Global – kailan kakausapin\n-Richard So – Ano ang kailangang tanggalin sa bubong at sino ang mga magtatanggal at magbabalik\n-Si Philip – kailan dadating Chinese Technician at parts ng Boiler\n*Every Monday & Thursday PQO 120 is reserved to Kuya Andy – whole day\n*Check the BFF Homes Sticker Status - PENDING\n*Ate Evelyn hatid sa umaga sa Makati – DONE\n*As per Boss Paul – tulungan siya na i-follow up sila Sir gelo at Ma’am Jenny tungkol sa Seafoods – ngayon araw langsiya nagpahanap nung mga seafoods like Salmon Head – may update agad si Ma’am Jenny kay Boss Paul\n*Day 3 ng vaccine ni Jilbert - DONE", "2026-02-03": "*12 pm – flight ni Mr Shiyin – NAIA T3 – 9am dapat nasa sa Airport na – Pagkahatid kay Mr Yan sa Office hatid na sa Airport si Mr Shiyin – DONE – Kuya Jake\n\n*As per Boss Paul – tulungan siya na i-follow up sila Sir gelo at Ma’am Jenny tungkol sa Seafoods\n\n*Dumating na Visitors from METROBANK (3) – meeting with Boss sana pero wala pa si Boss kaya si Boss Paul ang umattend\n\n*Boss Paul –Office (naglibot)\n\n*Follow up TIN ID ni Boss Paul need ni Ma’am Virgie\n\n*As per Ma’am Tammie – 4:30 pm na lang daw kasi magsasalang pa sila ng sample – Done before 3pm nag-usap sila", "2026-02-04": "*Etravel for Mr Yan \n*Online check-in will be available from 5:05 PM, Feb 4\n\n*As per Boss Paul – tulungan siya na i-follow up sila Sir gelo at Ma’am Jenny tungkol sa Seafoods\n\n* The 6th International Processing & Packaging Expo - Feb 4–6.\n*Follow up TIN ID ni Boss Paul need ni Ma’am Virgie\n\n*Follow up si Ate Marilyn sa update ng SSS niya", "2026-02-05": "*Hanggang Feb. 5 lang Visa ni Mr Shiyin\n\n*Every Monday & Thursday PQO 120 is reserved to Kuya Andy – whole day\n\n*As per Boss Paul – tulungan siya na i-follow up sila Sir gelo at Ma’am Jenny tungkol sa Seafoods\n\n*Kuya Rey – Reserve ni Ma’am Lily – Pick up 1,100 pieces of Tikoy – L300\n\n\n*Call BDO – for follow up if na-transfer na yung 10k Cashback – then proceed to cancellation\\\n\n*Check the status of Bf Homes sticker application", "2026-02-06": "*✈ Mga 2:00 am - gusto alis na sa Pasolo ni Mr Yan dahil 6:05 am flight schedule niya papuntang China and \n5:05 PM, February 6, 2026, Shanghai Pudong International Airport T1 to Zhengzhou\n\n*Boss Paul - Bible reading Paranaque\n\n*International Travel Trade Expo 2026 — Feb 6–8\n*As per Boss Paul – tulungan siya na i-follow up sila Sir gelo at Ma’am Jenny tungkol sa Seafoods\n\n*Day 7 ng vaccine ni Jilbert", "2026-02-12": "*Every Monday & Thursday PQO 120 is reserved to Kuya Andy – whole day\n\n*Prepare loot bags for MERALCO Visitors/ inspectors\nAsk Boss Paul kung tig iisang set o tig iisang loot bag lang", "2026-02-14": "*Benjie &Red Innova (Whole day) – 8am nasa bahay na ni Sir Alex Lim sundo sila then East Ocean", "2026-02-23": "*SIR JOSHUA GRADUATION DAY 🎓", "2026-02-24": "*Mga before or 1 am alis sa Pasolo dahil 4:35AM BOSS PAUL FLIGHT TO BOHOL ✈ \nHanggang March 1 – vacation ni Boss Paul", "2026-02-25": "* BOSS PAUL FLIGHT BOHOL TO ILO-ILO ✈\n6:50 PM -10:25 PM", "2026-02-26": "•        International Farmers Summit 2026 – Feb 26 – 28", "2026-03-01": "* BOSS PAUL FLIGHT ILO-ILO TO MANILA✈\n6:10 AM – 7:20 AM", "2026-03-12": "•\tWORLDBEX 2026 — Mar 12–15 (building & construction expo; also partly at SMX)", "2026-06-03": "July 3 to 5 Grandia to Baguio with Benjie Hiram Brother Alex"};
+let xlEvs = loadData('sharon_xl_evs', XL_BASE);
+let xlDone = loadData('sharon_xl_done', {});  // {dateKey: true}
+
+// Driver data (editable)
+const DRV_BASE = [{"date": "2025-11-10", "driver": "Benjie", "car": "Grandia", "errand": "•        7:30 am start na po sa Pasolo\n•        Driver po ni Boss Paul\n•        Sundo si Sir Joshua sa Pasolo – pupunta ng Makati may celebration pinsan niya – si Boss Paul sabay kay Boss. \n•        Driver nina Boss Paul at Sir Joshua pauwi"}, {"date": "2025-11-10", "driver": "Jake", "car": "-", "errand": "•       7 am start na po sa Pasolo, tulong kay Jilbert"}, {"date": "2025-11-10", "driver": "Rey", "car": "PQO 120", "errand": "•        7 am hatid po sina Mr Yan at Mr Li sa Office\n•        Then balik po ng Pasolo\n•        1 pm dapat nasa Relive Physical Therapy na po kayo ni Sir Joshua\n•        6 pm sundo po sina Mr Yan at Mr Li sa Office pauwi po ng Pasol"}, {"date": "2025-11-11", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-11-11", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid na po sina Mr Yan at Mr Li sa Office\n · Report to Ma’am Jenny\n · 6 pm hatid po sina Mr Yan, Mr Li, at 2 Chinese Visitor pauwi ng Pasolo"}, {"date": "2025-11-11", "driver": "Rey", "car": "Red Innova &\n PQO 120", "errand": "· 8:30 am nasa Office na po\n · 10 am dapat nasa bahay ka na po ni Sir Philip – RED INNOVA\n · 10:50 am po dating ng 2 Chinese Visitor sa NAIA Terminal 3\n · Pagkasundo po ay dito po sa office kayo pupunta\n · Report to Ma’am Jenny \n · Hatid sa church si Sir Philip dapat before 7:15 pm nasa church na po kayo"}, {"date": "2025-11-12", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-11-12", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po sina Mr Yan, Mr Li, at 2 bagong Chinese Engineers sa Office\n Kuya sa looban ka po dumaan since coding yung Red Innova\n · Report to Ma’am Jenny\n · 6 pm hatid po sina Mr Yan pauwi ng Pasolo"}, {"date": "2025-11-12", "driver": "Rey", "car": "PQO 120 & Hilux", "errand": "· 9 am nasa Pasolo ka na po Kuya para po kay Sir Joshua – CANCEL\n · Hilux – Dalhin mga B.O. na para sa Pasolo"}, {"date": "2025-11-13", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-11-13", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid na po sina Mr Yan sa Office\n · Report to Ma’am Jenny\n · 6 pm hatid po sina Mr Yan pauwi ng Pasolo"}, {"date": "2025-11-13", "driver": "Rey", "car": "PQO 120", "errand": "· 8 am nasa Office na po\n · Report to Ma’am Jenny\n · 4:30 pm alis na si Sir Joshua hatid sa 5th Ave"}, {"date": "2025-11-14", "driver": "Benjie", "car": "Ford", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul\n · 3 pm may meeting po siya dito sa Office"}, {"date": "2025-11-14", "driver": "Jake", "car": "Red Innova \n& PQO 120", "errand": "· 7 am hatid na po sina Mr Yan sa Office\n · Report to Ma’am Jenny – bangko\n · 6 pm hatid po sina Mr Yan pauwi ng Pasolo - PQO 120"}, {"date": "2025-11-14", "driver": "Rey", "car": "Red Innova", "errand": "· 8:30 am nasa Office na po\n · Gamitin po yung Red Innova papuntang Pasolo for Sir Joshua\n · 1:30 pm dapat nasa Relive Physical Therapy na po kayo ni Sir Joshua\n · Pagkatapos po ay hatid pauwi si Sir Joshua\n · Then deretso na po ng Office – gamitin po yung Red Innova sa uwian nina Mr Yan"}, {"date": "2025-11-15", "driver": "Benjie", "car": "-", "errand": "· 8am nasa Fortune na"}, {"date": "2025-11-15", "driver": "Jake", "car": "PQO 120 & Hilux", "errand": "· 7 am hatid sina Mr Yan sa Office\n · I-pick up yung errand ni Ma’am Lorie – PQO 120.\n  At dalhin yung mais sa Pasolo - Hilux – sa looban po dadaan\n · 6 pm sundo po sina Mr Yan pauwi ng Pasolo"}, {"date": "2025-11-15", "driver": "Rey", "car": "Grandia", "errand": "· 7 am nasa Pasolo na po \n · Driver po ni Boss Paul"}, {"date": "2025-11-16", "driver": "Benjie", "car": "Grandia", "errand": "· 6:30 am start na po sa Pasolo\n · Hatid sa church sina Boss Paul, Sir Joshua, at Mr Li\n · Driver po nina Boss Paul at Sir Joshua"}, {"date": "2025-11-16", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po sina Mr Yan at 2 Chinese Engineers sa Office\n · Balik sa Pasolo at gawin yung kulungan ng manok, as per Boss Paul request.\n Pero kung makakapagchurch ay magchurch po\n · Sundo si Mr Li sa Church\n · Sundo po sina Mr Yan pauwi ng Pasolo"}, {"date": "2025-11-16", "driver": "Rey", "car": "Hilux", "errand": "· 7 am Bro. Philip Labrador\n · Sundo Meycauayan\n · Sundo Sis. Carol\n · Mag-church care of Ptr Bernie\n · Hatid po sila pauwi"}, {"date": "2025-11-17", "driver": "Benjie", "car": "Grandia & L3", "errand": "· 6 am dadaanan ka po ni Kuya Andy\n · Kuhanin po yung Geely sa Amapola. Dalhin po sa Quezon Ave. (Pinabalik dahil di pa nadating yung pyesa)\n · Then balik po sa Pasolo\n · Driver po ni Boss Paul\n · Kuhanin po yung TV na binili ni Boss Paul sa Pasolo at dalhin po dito sa Office – L3\n · Driver po ni Boss Paul pauwi"}, {"date": "2025-11-17", "driver": "Jake", "car": "-", "errand": "· 7 am start na po sa Pasolo\n · Tapusin po yung kulungan na pinapagawa ni Boss Paul\n · Tulong kay Jilbert"}, {"date": "2025-11-17", "driver": "Rey", "car": "PQO 120", "errand": "· Kuhanin po yung PQO 120 sa Office\n · 7 am hatid po sa Office sina Mr Yan\n · Then balik po sa Pasolo for Sir Joshua\n · 11:30 am alis na daw po si Sir Joshua punta sa Relive Physical Therapy\n · 6 pm sundo po sina Mr Yan pauwi ng Pasolo"}, {"date": "2025-11-18", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-11-18", "driver": "Jake", "car": "Red Innova", "errand": "•7 am hatid po sina Mr Yan sa Office\n•Report to Ma’am Jenny\n•May errand po si Ma’am Lily sa Malabon, at may isa pa"}, {"date": "2025-11-18", "driver": "Rey", "car": "-", "errand": "•8 am nasa Office na po\n•Report to Ma’am Jenny\n•PQO 120 – 6pm hatid po sina Mr Yan pauwi ng Pasolo"}, {"date": "2025-11-19", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-11-19", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po sina Mr Yan sa Office\n · Report to Ma’am Jenny - Bangko\n · 6 pm hatid po sina Mr yan pauwi ng Pasolo"}, {"date": "2025-11-19", "driver": "Rey", "car": "PQO 120", "errand": "· 8 am nasa Office na po\n   Kuhanin po yung PQO 120 at punta po ng Pasolo for Sir Joshua\n ·1 pm dapat nasa Relive Physical Therapy na po kayo ni Sir Joshua\n · Pagkatapos po ay hatid po siya sa DLSU, by 4 pm De LaSalle na po\n · 6 pm or 7 pm sundo po si Sir Joshua sa 5th Ave"}, {"date": "2025-11-20", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start nap o sa Pasolo\n · Driver po ni Boss Paul\n · Before 2 pm dapat nasa Meycauayan na po kayo ni Boss Paul\n May meeting po siya doon"}, {"date": "2025-11-20", "driver": "Jake", "car": "Red Innova \n& PQO 120", "errand": "· 7 am hatid po sina Mr Yan sa Office\n · Report to Ma’am Jenny\n · 6 pm hatid po pauwi sina Mr Yan – PQO 120"}, {"date": "2025-11-20", "driver": "Rey", "car": "Red Innova", "errand": "· Before 8 am , pagdating po ni Kuya Jake, alis na po agad papuntang Pasolo\n · 9 am alis na po si Sir Joshua papuntang MOA\n · Driver po ni Sir Joshua"}, {"date": "2025-11-21", "driver": "Benjie", "car": "Ford", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul\n · 12 NN nasa clinic nap o kayo ni Dra Gwendolyn.\n May appointment po si Boss Paul"}, {"date": "2025-11-21", "driver": "Jake", "car": "Red Innova \n& PQO 120", "errand": "· 7 am hatid po sina Mr Yan sa Office\n · Report to Ma’am Jenny\n · 6 pm hatid po pauwi ng Pasolo sina Mr Yan"}, {"date": "2025-11-21", "driver": "Rey", "car": "Red Innova", "errand": "· 8 am nasa Office na po\n · Report to Ma’am Jenny – Bangko\n · Mga 3 pm nasa Pasolo ka na po\n · 3:30 pm alis po si Sir Joshua – hatid po sa 5th Ave\n · 6:30 pm sundo po si Sir Joshua sa 5th Ave"}, {"date": "2025-11-22", "driver": "Benjie", "car": "PQO 120\n AMAPOLA", "errand": "· Sabay kay Kuya Jake sa paghatid kina Mr Yan sa Office.\n · Kuhanin yung PQO 120 at gamiting service papunta sa Amapola"}, {"date": "2025-11-22", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po sina Mr Yan sa Office. Saby po si Kuya Benjie.\n · Dalhin po yung Submersible Pump ni Boss Paul at ibigay kay Sir Marlon\n · Balik po sa Pasolo for Sir Joshua\n · 9:30 am alis na si Sir Joshua, hatid sa 5th Ave\n · 6 pm sundo po sina Mr Yan pauwi ng Pasolo"}, {"date": "2025-11-22", "driver": "Rey", "car": "Grandia", "errand": "· 6:30 am nasa Pasolo na po\n · Driver po ni Boss Paul"}, {"date": "2025-11-23", "driver": "Benjie", "car": "Amapola", "errand": "· Nag-coordinate kay Kuya Andy"}, {"date": "2025-11-23", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am start na po sa Pasolo \n Tulong kay Jilbert\n · Magchurch po care of Ptr Bernie. Ask mo sila Ate Jho kung gusto nila pong magchurch"}, {"date": "2025-11-23", "driver": "Rey", "car": "Grandia", "errand": "· 6:30 am nasa Pasolo ka na po\n · Hatid po sa Church sina Boss Paul kasama po sina Mr Yan, Mr Li, Mr Deng, & Mr Xia\n · Driver po nila Boss Paul"}, {"date": "2025-11-24", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-11-24", "driver": "Jake", "car": "-", "errand": "· 7 am start na po sa Pasolo\n · Tulong po kay Jilbert"}, {"date": "2025-11-24", "driver": "Rey", "car": "PQO 120", "errand": "· 7 am hatid po sina Mr Yan sa Office\n · Pagkatapos po ay balik po sa Pasolo for Sir Joshua\n · 1 pm dapat nasa Relive Physical Therapy na po kayo\n · Then hatid si Sir Joshua pauwi ng Pasolo\n · Pagkatapos balik po sa Office\n · 6 pm hatid po pauwi ng Pasolo sina Mr Yan"}, {"date": "2025-11-25", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-11-25", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po sina Mr Yan sa Office\n · Report to Ma’am Jenny\n · 6 pm hatid po sina Mr Yan at Mr Li pauwi ng Pasolo\n · 8: 30 pm sundo po si Sir Joshua sa 5th Ave"}, {"date": "2025-11-25", "driver": "Rey", "car": "Red Innova", "errand": "· 8:30 am nasa Office na po\n · Report to Ma’am Jenny\n · 1 pm hatid po sina Mr Xia at Mr Deng sa NAIA T3 – Red Innova\n · Then punta po sa Pasolo for Sir Joshua\n · 4:30 pm punta po siya sa 5th Ave\n · Balik po sa Office"}, {"date": "2025-11-26", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · 10 am sa Meycauayan na po si Boss Paul, meet po sila ni Sir Philip\n · Driver po ni Boss Paul"}, {"date": "2025-11-26", "driver": "Jake", "car": "Red Innova\n(sa looban\npo dadaan)", "errand": "· 7 am hatid po sina Mr Yan at Mr Li sa Office\n · Report to Ma’am Jenny – Bangko\n · 6 pm hatid po pauwi ng Pasolo sina Mr Yan at Mr Li"}, {"date": "2025-11-26", "driver": "Rey", "car": "PQO 120", "errand": "· 8 am nasa office na po\n · Report to Ma’am Jenny\n · Malalapit lang po na errand (naka-2 errand, Ma’am Rhia at Ms Jenny)\n · Then punta po ng Pasolo for Sir Joshua (hinatid muna si Sir Philip sa Meycauayan)\n · 1pm dapat nasa Relive Physical Therapy na po kayo ni Sir Joshua\n · Driver po ni Sir Joshua"}, {"date": "2025-11-27", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-11-27", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po sina Mr Yan at Mr Li sa Office\n · Report to Ma’am Jenny\n · 6 pm hatid po pauwi sa Pasolo sina Mr Yan at Mr Li"}, {"date": "2025-11-27", "driver": "Rey", "car": "PQO 120", "errand": "· 8 am nasa Office na po\n · Report to Ma’am Jenny\n · Dapat makabalik po agad for Sir Joshua\n · 3:30 pm alis po si Sir Joshua, punta po siya sa Campus nila (DLSU)\n · 5 pm sundo po sa 5th Ave"}, {"date": "2025-11-28", "driver": "Benjie", "car": "Grandia", "errand": "· 10 alis nap o ng Pasolo papuntang Rizal\n · 11 am nasa bahay na ni Sir Alex Lim\n · Driver nina Sir Alex\n · Supposedly ihahatid lang but need ng driver nina Sir Alex"}, {"date": "2025-11-28", "driver": "Jake", "car": "Red Innova & NQP 882", "errand": "· 7 am hatid sa Office sina Mr Yan – Red Innova\n · Report to Ma’am Jenny – Bangko\n · 4:30 pm pahatid po si Sir Joshua sa 5th Ave – NQP 882\n · 6 pm sundo sina Mr Yan pauwi ng Pasolo\n · Sundo si Sir Joshua"}, {"date": "2025-11-28", "driver": "Rey", "car": "Isuzu Pick", "errand": "•        8 am nasa office na po \n•        Kunin mga documents/pera para sa pagpick up ng Isuzu Dmax\n•        Pagkatapos ay nagpadiesel muna si Kuya Ssince nasa Pasolo si Kuya Agustin\n•        Then punta ng Pasolo for Sir Joshua sana kaso dahil di nagpunta ng office si Boss Paul \nat di makakapunta sa CGC si Kuya Agustin- siya na ang sa CGC"}, {"date": "2025-11-28", "driver": "Agustin", "car": "Red Innova", "errand": "· After mo po Kuya maghatid sa Office punta po ikaw sa Pasolo for Boss Paul\n · Driver po ni Boss Paul \n · (Dinala yung Red Innova pabalik ng Planta dahil wala pa yung NQP 882 sa Pasolo)"}, {"date": "2025-11-29", "driver": "Benjie", "car": "Grandia", "errand": "· 9 am andun na daw dapat sa Hotel nila Sir Alex\n · Driver nina Sir Alex Lim"}, {"date": "2025-11-29", "driver": "Jake", "car": "Red Innova", "errand": "· 7am hatid na sina Mr Yan sa Office gamit yung NQP 882\n · Balik sa Pasolo gamit yung Red Innova\n · Tulong kay Jilbert\n · 6pm sundo pauwi sina Mr. Yan"}, {"date": "2025-11-29", "driver": "Rey", "car": "Isuzu Pick Up", "errand": "· 7 am nasa Pasolo na po\n · Driver po ni Boss Paul"}, {"date": "2025-11-30", "driver": "Benjie", "car": "", "errand": "DAY OFF"}, {"date": "2025-11-30", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po si Mr Yan sa Office\n · Then magchurch po care of Ptr Bernie, invite din po sina Ate Jho\n · Sundo po si Mr Li after church\n · 6pm sundo po si Mr Yan pauwi ng Pasolo"}, {"date": "2025-11-30", "driver": "Rey", "car": "Grandia", "errand": "· 6:30 am  nasa Pasolo na po\n · Hatid po sa Church siina Boss Paul at Mr Li\n · Driver po ni Boss Paul"}, {"date": "2025-12-01", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-12-01", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 7 am hatid po sina Mr Yan sa Office\n · Report to Ma’am Jenny \n · 6 pm hatid po pauwi sina Mr Yan"}, {"date": "2025-12-01", "driver": "Rey", "car": "-", "errand": "· 8 am nasa Office na po\n · Report to Ma’am Jenny"}, {"date": "2025-12-02", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-12-02", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po sina Mr Yan sa Office\n · Report to Ma’am Jenny \n · 6 pm hatid po pauwi sina Mr Yan"}, {"date": "2025-12-02", "driver": "Rey", "car": "Isuzu Pick Up", "errand": "· 6 am alis na po kayo ni Sir Joshua sa Pasolo papuntang UPLB\n · Driver ni Sir Joshua"}, {"date": "2025-12-03", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-12-03", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po sina Mr Yan sa Office\n · Report to Ma’am Jenny – Bangko\n · 6 pm hatid po pauwi sina Mr Yan"}, {"date": "2025-12-03", "driver": "Rey", "car": "Isuzu Pick Up", "errand": "· 6 am alis na po kayo ni Sir Joshua sa Pasolo papuntang UPLB\n · Driver ni Sir Joshua"}, {"date": "2025-12-03", "driver": "Agustin", "car": "L309", "errand": "· After m po maghatid sa Office punta po ng Pasolo\n · Dalhin po yung motor na para po kay Boss Paul \n · Then kuhanin po sa Pasolo yung mga pa-give aways ni Boss Paul\n · Report to Ma’am Jenny pagkakuha po"}, {"date": "2025-12-04", "driver": "Benjie", "car": "Grandia", "errand": "· 11 am Malabon sana at si Kuya Agustin kay Boss Paul– Cancel\n · Driver ni Boss Paul\n · 2 pm dapat nasa Office na si Boss Paul dahil may meeting siya sa Conference Room"}, {"date": "2025-12-04", "driver": "Jake", "car": "NQP 882", "errand": "· Supposedly Isuzu Pick Up tas looban dadaan pero dinala niya kahapon yung NQP 882 at iniwan yung Red Innova s Office\n · 7 am hatid sina Mr Yan sa Office\n · Report to Ma’m Jenny\n · 6 pm hatid sina Mr Yan pauwi ng Pasolo"}, {"date": "2025-12-04", "driver": "Rey", "car": "Red Innova", "errand": "· 5 am alis na po ng Pasolo kayo ni Sir Joshua para makapasyal sa UPLB\n · Driver ni Sir Joshua"}, {"date": "2025-12-05", "driver": "Benjie", "car": "Ford", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul\n · On or Before 2pm dapat nasa office na po kayo ni Boss Paul, may meeting po siya ulit ng 2pm\n · Pupunta po sa church si Boss Paul, Bible Reading"}, {"date": "2025-12-05", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid na po sina Mr Yan sa Office\n · Report to Ma’am Jenny – Bangko\n · 6 pm hatid po pauwi ng Pasolo sina Mr Yan \n · 10pm sundo si Sir Joshua, LaSalle or Football po - pero kapag wala daw po siyang sinabi kung saan ay sa LaSalle daw po siya sunduin"}, {"date": "2025-12-05", "driver": "Rey", "car": "Isuzu Pick Up", "errand": "· 6 am alis na po kayo ni Sir Joshua sa Pasolo papuntang UPLB\n · Driver po ni Sir Joshua"}, {"date": "2025-12-05", "driver": "Agustin", "car": "Commute", "errand": "· After mo po maghatid sa office, commute po ikaw papuntang Pasolo \n · 10 am alis na po ng Pasolo, dalhin po sa Toyota Balintawak yung Grandia po ni Boss Paul \n · Pakihanap po si Sir Jericho ng repair po\n · Iboobook ko po kayo sa Move it pabalik po ng Office \n · 4pm - NQP 882, CGC Makati"}, {"date": "2025-12-06", "driver": "Benjie", "car": "Day Off na", "errand": "· Pagkatapos mo po icheck license mo po sa Grandia - Toyota Balintawak, balik po agad nang Pasolo\n · Kung maabutan mo po si Boss Paul sa Pasolo ikaw na po driver niya \n · Pero kung hindi mo na po naabutan ay tulong po kay Jilbert at standby for errand"}, {"date": "2025-12-06", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 7 am hatid po sina Mr Yan sa office \n · Dalhin po Paleta sa Pasolo – sumabay si Ate Jo para mamalengke kaya di nakuha mga paleta\n · 6pm sundo po sina Mr Yan pauwi ng Pasolo"}, {"date": "2025-12-06", "driver": "Rey", "car": "Red Innova", "errand": "· 7 am start na po sa Pasolo \n · Driver po ni Boss Paul incase na di po agad nakabalik sa Pasolo si Kuya Benjie\n · Pero kung makabalik po agad ay tulong po kay Jilbert at standby for errand po"}, {"date": "2025-12-07", "driver": "Benjie", "car": "Day Off", "errand": "· Pero hatid po si Mr Li sa NAIA T1\n · NQP 882 – punta ng Taytay, Rizal para kuhanin License niya"}, {"date": "2025-12-07", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 7 am start na po sa Pasolo\n · Dalhin po mga pagkain para sa Church\n · Then driver po nina Mr Yan at Mr Zhu pauwi"}, {"date": "2025-12-07", "driver": "Rey", "car": "Red Innova", "errand": "· 7 am nasa Pasolo na po\n · Hatid po sa church sina Boss Paul, Sir Joshua, Mr Zhu at Mr Yan\n · Driver po ni Boss Paul at Sir Joshua"}, {"date": "2025-12-08", "driver": "Benjie", "car": "Ford", "errand": "· 7:30 am start na po sa Pasolo\n · 1 pm dapat nasa Amapola na po si Boss Paul\n · Driver po ni Boss Paul"}, {"date": "2025-12-08", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 7 am hatid po sina Mr Yan at Mr Zhu sa Office\n · Then pakuha po ng 1 loot bag sa Logistic Room para po kay Mr Zhu\n · Nagpatubig di si Kuya Jake\n · 6 pm sundo po sina Mr Yan at Mr Zhu"}, {"date": "2025-12-08", "driver": "Rey", "car": "PQO 120", "errand": "· 8:30 am nasa Pasolo na po\n · Tulong kay Jilbert\n · 1pm nasa Relive Physical Therapy na po kayo ni Sir Joshua\n · 10:30 pm hatid po sa NAIA T1 si Mr Zhu, 2:55 am Flight po niya"}, {"date": "2025-12-09", "driver": "Benjie", "car": "Red Innova", "errand": "· 7 am hatid po sina Boss Paul at Mr yan sa Office\n · Driver po ni Boss Paul at Mr Yan"}, {"date": "2025-12-09", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 7 am start na po sa Pasolo\n · Standby po for Sir Joshua – baka ayusin niya po portal niya sa LTO\n · Pero di natuloy"}, {"date": "2025-12-09", "driver": "Rey", "car": "-", "errand": "· 8 am nasa Office na po\n · Report to Ma’am Jenny\n · Standby mamayang 6 pm hatid Mr Yan kung di sabay sila ni Boss Paul"}, {"date": "2025-12-10", "driver": "Benjie", "car": "Red Innova", "errand": "· 7 am sa Amapola na"}, {"date": "2025-12-10", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 8 am or earlier po ay aalis si Sir Joshua papunta sa Valenzuela LTO\n · After po ay punta sa Office for errand ni Ma’am Lily- pero okay na dahil natapos at nahtid na ni Kuya Rey\n · Kaya nagstay sa Pasolo at tulong na lang kay Jilbert"}, {"date": "2025-12-10", "driver": "Rey", "car": "Ford", "errand": "· 7 am hatid po sina Boss Paul at Mr Yan sa Office\n · Report to Ma’am Jenny – errand po ni Ma’am Lily\n · 6 pm hatid po sina Boss Paul at Mr Yan pauwi ng Pasolo"}, {"date": "2025-12-11", "driver": "Benjie", "car": "-", "errand": "· 10 am sa Malabon na"}, {"date": "2025-12-11", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid si Mr Yan sa Office \n · Sumabay pala si Boss Paul\n · Report to ma’am Jenny – errand ni Ma’am Lily helper sa truck para mag-pick up ng table then hinitay si Kuya Rey dahil mabigat yung lamesa\n · 6pm hatid po sina Boss Paul at Mr Yan pauwi ng Pasolo"}, {"date": "2025-12-11", "driver": "Rey", "car": "Ford – di tuloy", "errand": "· 7 am nasa Pasolo na for Boss Paul\n · Kaso sumabay pala si Boss Paul kkay Mr Yan\n · Punta na lang sa Office \n · Report to Ma’am Jenny – nagpick up ng table kasama si Kuya Jake"}, {"date": "2025-12-12", "driver": "Benjie", "car": "Ford", "errand": "· 7 am start na po sa Pasolo\n · 1 pm dapat nasa Clinic na po ni Dra. Gwendolyn si Boss Paul\n · Driver po ni Boss Paul"}, {"date": "2025-12-12", "driver": "Jake", "car": "Red Innova pero nagpalit sila ni Kuya Rey", "errand": "· 7 am hatid po si Mr Yan sa Office\n · Report to Ma’am Jenny – Bangko\n · 6 pm hatid si Mr Yan pauwi ng Pasolo pero need g driver sa shuttle papunta kina Ma’am Mariz. Nagpalit sila ni Kuya Rey – nagpunta siya Pasay for Sir Joshua\n · Driver ni Sir Joshua"}, {"date": "2025-12-12", "driver": "Rey", "car": "Isuzu Pick Up pero nagpalit sila ni Kuya Jake", "errand": "· 8 am nasa Pasolo na po\n · Standby po muna for Sir Joshua – puntang World Trade Center\n · Mga hapon nagpalit sila ni Kuya Jake dahl need ng driver sa shuttle papunta kay Ma’am Mariz.\n · Driver sa shuttle"}, {"date": "2025-12-12", "driver": "Anthony", "car": "Red Innova", "errand": "· 6 pm hatid si Mr Yan pauwi ng Pasolo\n · Motor ni Kuya Rey ginamit niya pabalik ng Pasolo para deretso na uwi si Kuya Rey after sa shuttle"}, {"date": "2025-12-13", "driver": "Benjie", "car": "Isuzu  Pick Up / Ford", "errand": "· 7 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-12-13", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po si Mr Yan sa Office\n · Then balik po sa Pasolo tulong kay Jilbert – kasama si Ate Jo sa paghatid kay Mr Yan para mamalengke"}, {"date": "2025-12-13", "driver": "Rey", "car": "Red Innova", "errand": "· 9 am nasa Pasolo na po\n · Hatid po sa No. 23 sta. Rosa Street, Manresa Garden Unit A16, Quezon City yung Gift ni Boss Paul for Sir Tiong Seng\n · Then may errand si Boss Paul sa Makati"}, {"date": "2025-12-13", "driver": "Agustin", "car": "NQP 882", "errand": "· 6 pm hatid po si Mr Yan pauwi ng Pasolo\n · Dahil di pa pauwi at baka matraffic sa daan sina Boss Paul at Kuya Benjie – uwi sana Pasolo at si Kuya Jake sundo kay Mr Yan"}, {"date": "2025-12-14", "driver": "Agustin", "car": "PQO 120 / Red Innova", "errand": "· dalhin pqo 120 sa pasolo dahil wala raw Laguna\n · Red Innova gamitin sa Pasolo \n · Driver of Boss Paul \n · Bago mag 630am nasa Pasolo na"}, {"date": "2025-12-14", "driver": "Benjie", "car": "Isuzu Pick Up", "errand": "· 730am nasa fortune na para sundo Kenneth at Monique\n · Mag church care of Pastor Bernie \n · 1pm dapat alis na CGC Makati hatid sila Fortune Para makabalik agad sa Makati\n · paki call Andy kung sa CGC Makati or Amapola ka diretso \n · Mag out na pag tapos baba table sa Amapola dahil mag hatid ka kay Boss Paul, Sir Chenfei at Joshua sa Airport madaling araw ng lunes"}, {"date": "2025-12-14", "driver": "Jake", "car": "PQO 120", "errand": "· 7am hatid Mr Yan office \n · Diretso agad sa Cgc Makati dahil may ibang mga utos, paki tanong kay Andy pag dating \n · Mag church care of Pastor Bernie \n · Pagtapos baba table sa Amapola, mag tawagan kayo ni Kuya Rudy kung sino mauna sundo Mr Yan office 6pm\n · PQO 120 iwan Pasolo para si Agustin mag garahe pauwi llano"}, {"date": "2025-12-14", "driver": "Rey", "car": "Hilux Shuttle", "errand": "· HINDI pasundo Brother Philip at sayi \n · Sundo Meycauayan \n · Sundo Sister Carol\n · Mag church care of Pastor Bernie\n · Palit na kayo ni FERDINAND, siya na Hatid sa kanila uwi\n · Kuya FerdInand, 6PM Sundo Mr Yan office, tawagan kayo ni Jake kung sino mauna"}, {"date": "2025-12-15", "driver": "Benjie", "car": "Red Innova & Isuzu Pick Up", "errand": "· 1 am aalis sa Pasolo nila Boss Paul at Sir Joshua.\n · Then sundo si Sir Philip at hatid sila sa NAIA T1\n · 7am hatid si Mr Yan sa Office\n · Report to Ma’am Jenny\n · Isabay yung pianpadeposit ni Boss Paul \n · Tas sa Malabon as per Ma’am Lily\n · 6pm hatid po si Mr Yan sa Pasolo"}, {"date": "2025-12-15", "driver": "Jake", "car": "-", "errand": "· Isinama ni Kuya Benjie sa Office"}, {"date": "2025-12-16", "driver": "Benjie", "car": "Isuzu Pick Up", "errand": "· 7:30 am start na po sa Pasolo\n · Errand ni Sir Joshua\n · Tas may errand si Ma’am Lily, Amapola, naghatid din sa Airport kay Sis. Jackie"}, {"date": "2025-12-16", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid si Mr Yan sa Office\n · Report to Ma’am Jenny\n · Kasama ni Kuya Rey sa errand\n · 6 pm hatid si Mr Yan pauwi ng Pasolo\n · DAlhin bigas sa PAsolo at Fortuen – Di niya nadala"}, {"date": "2025-12-16", "driver": "Rey", "car": "L300", "errand": "· 8 am nasa Office na po\n · Errand ni Ma’am Lilly – kuha ng 300 pails ngpasalubong special at dalhin kay Sister Esther\n · Isinabay na din ibang errand – magkasama sila ni Kuya Jake"}, {"date": "2025-12-17", "driver": "Benjie", "car": "Red Innova", "errand": "· 7 am nasa Amapola na"}, {"date": "2025-12-17", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 7 am hatid po si Mr Yan sa Office\n · Report to Ma’am Jenny\n · 6 pm hatid po pauwi si Mr Yan"}, {"date": "2025-12-17", "driver": "Rey", "car": "-", "errand": "· 8 am nasa Office na\n · Report to Ma’am Jenny – Bangko\n · Mga 3 pm naghatid ng bigas sa Pasolo at Fortune"}, {"date": "2025-12-18", "driver": "Benjie", "car": "-", "errand": "· 9:30 am nasa Malabon na"}, {"date": "2025-12-18", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po si Mr Yan sa Office\n · Report to Ma’am Jenny\n · 6 pm hatid po pauwi si Mr Yan"}, {"date": "2025-12-18", "driver": "Rey", "car": "-", "errand": "· 8:30 am nasa Office na po\n · Report to Ma’am Jenny"}, {"date": "2025-12-19", "driver": "Benjie", "car": "Red Innova", "errand": "· 7 am hatid po si Mr Yan sa Office kasama po si Kuya Jake\n · Report to Ma’am Jenny – pasama po errand ni Ma’am Lily sa Mercury\n · 6 pm hatid po si Mr Yan pauwi ng Pasolo kasama si Kuya Jake \n · Kaso nasa errand pa si Kuya Jake tas ang dinala nila ay Isuzu Pick Up\n · Kaya PQO 120 ang ginamit ni Kuya Benjie sa paghatid kay Mr Yan"}, {"date": "2025-12-19", "driver": "Jake", "car": "-", "errand": "· 7 am sumama po kay Kuya Benjie papuntang Office\n · Report to Ma’am Jenny – siya sana sa bangko kaso may need dalhin na mga loot bag at Hilux o L3 need dalhin – kaya sa errand siya\n · 6 pm sabay po kaya Kuya Benjie pauwi ng Pasolo – Dahil late na siya natapos sa errand sa Pasolo na siya dumeretso. Kinabukasan na niya dinala mga errand na nakuha niya"}, {"date": "2025-12-19", "driver": "Rey", "car": "NQP 882", "errand": "· 8:30 am nasa Office na po\n · Report to Ma’am Jenny – kukuhanin ang Grandia sa Casa. Pakikuha papel na need kay Ma’am Michelle. 10 am nasa Casa na kasi coding yung Grandia\n · Sumabay si Kuya Rey kina Kuya Benjie at Ma’am Beth\n · Hinatid na siya ni Kuya Benjie sa Casa kaya di na gamit petty cash\n · Pagkatapos kuhanin Grandia pinaayos yung ilaw tas dinala na sa Pasolo Grandia\n · Ginamit niya motor ni Kuya Benjie papuntang Office\n · 4 pm – CGC Makati"}, {"date": "2025-12-20", "driver": "Benjie", "car": "-", "errand": "ABSENT"}, {"date": "2025-12-20", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 7 am hatid po si Mr Yan sa Office\n · Errand po ni Ma’am Lorie\n · 6 pm sundo po si Mr Yan pauwi ng Pasolo"}, {"date": "2025-12-20", "driver": "Rey", "car": "Red Innova", "errand": "· 8 am nasa Pasolo na po tulong kay Jilbert\n · Kuhanin po kay Kuya Benjie yung envelope para po kay Ma’am Sarah\n · 5 pm dalhin po yung gift sa St. Luke QC, look for Ms. Kathy"}, {"date": "2025-12-21", "driver": "Benjie", "car": "-", "errand": "DAY OFF"}, {"date": "2025-12-21", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po sim r Yan sa Office\n · Balik po ng Pasolo at hatid po yung pagkain sa Church\n · Wait po yung lagayan – pero kung makapag church ka po mas maganda po\n · 6 pm sundo si Mr Yan – kaso na naiwan niya susi sa loob Red Innova at naka park sa Mall hindi sa Church dahil iwan niya license \n · Hinintay niya si Kuya Agustin para sunduin siya"}, {"date": "2025-12-21", "driver": "Rey", "car": "-", "errand": "DAY OFF"}, {"date": "2025-12-21", "driver": "Agustin", "car": "PQO 120, Grandia", "errand": "· After po sa CGC pasundo po si Mr Yan- dapat Kuya Benjie kaso di na niya sinundo si Mr Yan\n · Then punta kay Kuya Jake –trinay open yung Innova pero wala talaga\n · Umuwi muna ng Pasolo para ihatid si Kuya Jake at kuhanin yung Grandia\n · 10:30 pm dapat nasa NAIA T1 for Boss Paul, Sir Joshua, and Sir Philip"}, {"date": "2025-12-22", "driver": "Benjie", "car": "Grandia & Isuzu Pick Up", "errand": "· 7 am hatid muna si Mr Yan sa Office \n · Balik sa Pasolo\n · Driver ni Boss Paul"}, {"date": "2025-12-22", "driver": "Jake", "car": "-", "errand": "DAY OFF\n · Pero kinuha niya muna yung Red Innova tas sarado yug Church kaya di niya nakuha lagayan"}, {"date": "2025-12-22", "driver": "Rey", "car": "-", "errand": "· 8am nasa Office na po\n · Report to Ma’am Jenny"}, {"date": "2025-12-23", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-12-23", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 7 am hatid po si Mr Yan sa Office\n · Report to ma’am Jenny\n · May errand si Ma’am Lily- hatid sa Malabon 2 box Boy Bawang Garlic 90 grams \n · 6 pm hatid po si Mr Yan pauwi ng Pasolo"}, {"date": "2025-12-23", "driver": "Rey", "car": "-", "errand": "· 8 am nasa Office na po\n · Report to Ma’am Jenny - Bangko"}, {"date": "2025-12-24", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul\n · 6pm may Family Dinner po sila sa Hai Shin Lou"}, {"date": "2025-12-24", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 7 am hatid po si Mr Yan sa Office\n · Then kuhanin po yung mga paleta\n · 4pm sundo na po si Mr Yan dahil kasama daw po mamaya sa Family Dinner nina Boss Paul si Mr Yan sa Hai Shin Lou"}, {"date": "2025-12-24", "driver": "Rey", "car": "-", "errand": "· 8 am nasa Pasolo na po\n · Tulong po kay Jilbert\n · Kung wala na pong gagawin o errand ay uwi na lang po ng maaga"}, {"date": "2025-12-25", "driver": "Benjie", "car": "Grandia", "errand": "· 7:30 am start na po sa Pasolo\n · Driver po ni Boss Paul"}, {"date": "2025-12-25", "driver": "Jake", "car": "Red Innova", "errand": "· 7 am hatid po si Mr Yan sa Office\n · Kuhanin po yung sirang paleta kung may tira pa po\n · 6 pm sundo po si Mr Yan pauwi ng Pasolo"}, {"date": "2025-12-25", "driver": "Rey", "car": "-", "errand": "ABSENT"}, {"date": "2025-12-26", "driver": "Benjie", "car": "Ford", "errand": "· 7 am start na po sa Pasolo\n · Driver po ni Boss Paul\n · Aattend po si Boss Paul ng Conference po ng CGC sa Parañaque"}, {"date": "2025-12-26", "driver": "Jake", "car": "Isuzu Pick Up", "errand": "· 7 am hatid po si Mr Yan sa Office – wag po kalimutang dalhin yung bag po ng Checke\n · Report to Ma’am Jenny – Bangko\n · 6 pm hatid po si Mr Yan pauwi ng Pasolo"}, {"date": "2025-12-26", "driver": "Rey", "car": "Hilux Shuttle", "errand": "· Sundo Meycauayan\n · Sundo po si Sister Carol\n · Hatid sila pauwi\n · Time ng sundo pareho every Sunday na time\n · Paki-ask Brother Philip if sama siya pauwi"}];
+let drvData = loadData('sharon_drv', DRV_BASE);
+
+// RFID data (editable)
+const ET_BASE = {"NIU 4271": {"account": "540001491769", "balance": 6575.0, "date": "AS OF OCTOBER 17, 2025", "username": "Niu4271"}, "NAK 3769": {"account": "520010888359", "balance": 0.0, "date": "AS OF OCTOBER 17, 2025", "username": "nak3769"}, "NIC 5906": {"account": "540000386129", "balance": 5056.5, "date": "AS OF OCTOBER 17, 2025", "username": "Innovas8k433"}, "SQE 717/NIB-8642": {"account": "540000379420", "balance": 3605.0, "date": "AS OF OCTOBER 17, 2025", "username": "innova717"}, "D3B708/NIJ 5047": {"account": "540000837004", "balance": 5298.2, "date": "AS OF OCTOBER 17, 2025", "username": "isuzuwhite"}, "HY847B": {"account": "540002663778", "balance": 7174.01, "date": "AS OF OCTOBER 17, 2025", "username": "HY847B"}};
+const AS_BASE = {"NIU 4271": {"card": "D125720", "account": "3648315", "balance": 3175.0, "date": "AS OF OCTOBER 21, 2025", "email": "mirah.lor@kskfoodproducts.com"}, "NAK 3769": {"card": "R594987", "account": "1078267", "balance": 0.0, "date": "AS OF OCTOBER 21, 2025", "email": "ujc.judy@gmail.com"}, "NIC 5906": {"card": "I096260", "account": "2604295", "balance": 9288.0, "date": "AS OF OCTOBER 21, 2025", "email": "ujc.judy@gmail.com"}, "SQE 717/NIB 8642": {"card": "I067455", "account": "2575162", "balance": 9013.0, "date": "AS OF OCTOBER 21, 2025", "email": "ujc.judy@gmail.com"}, "D3B 708/NIJ 5047": {"card": "I329239", "account": "2846673", "balance": 4460.0, "date": "AS OF OCTOBER 21, 2025", "email": "ujc.judy@gmail.com"}, "HY847B": {"card": "S079205", "account": "4712043", "balance": 11437.0, "date": "AS OF OCTOBER 21, 2025", "email": "mirah.lor@kskfoodproducts.com"}};
+let etData = loadData('sharon_et', ET_BASE);
+let asData = loadData('sharon_as', AS_BASE);
+
+function saveAll() {
+  // localStorage (instant, offline backup)
+  saveData('sharon_v4', userEvs);
+  saveData('sharon_xl_evs', xlEvs);
+  saveData('sharon_xl_done', xlDone);
+  saveData('sharon_drv', drvData);
+  saveData('sharon_et', etData);
+  saveData('sharon_as', asData);
+  // Firestore (persistent cloud)
+  saveToFirestore();
+}
+
+// ─── UTILS ───
+function dKey(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function fmt12(t){ if(!t)return ''; const[h,m]=t.split(':').map(Number); return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function todayKey(){ return dKey(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate()); }
+
+function xlTitle(key) {
+  const full = xlEvs[key] || '';
+  return full.split('\n')[0].replace(/^\*+\s*/,'').replace(/^•\s*/,'').trim().slice(0,40);
+}
+
+// ─── TABS ───
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='summary') renderSummary();
+  if(name==='drivers') renderDrivers();
+  if(name==='easytrip') renderEasytrip();
+  if(name==='autosweep') renderAutosweep();
+  if(name==='monitoring') renderMonitoring();
+}
+
+// ═══════════════════ CALENDAR ═══════════════════
+function renderCalendar() {
+  document.getElementById('monthLbl').textContent = `${MONTHS[vMonth]} ${vYear}`;
+  document.getElementById('msSectionTitle').textContent = `🌸 ${MONTHS[vMonth]} ${vYear} — Full Summary`;
+  const grid = document.getElementById('calGrid'); grid.innerHTML = '';
+  const firstDay = new Date(vYear,vMonth,1).getDay();
+  const dim = new Date(vYear,vMonth+1,0).getDate();
+  const prevDim = new Date(vYear,vMonth,0).getDate();
+  let cells = [];
+  for(let i=firstDay-1;i>=0;i--){let m2=vMonth-1,y2=vYear;if(m2<0){m2=11;y2--;}cells.push({d:prevDim-i,m:m2,y:y2,other:true});}
+  for(let d=1;d<=dim;d++) cells.push({d,m:vMonth,y:vYear,other:false});
+  while(cells.length%7!==0){let e=cells.length-dim-firstDay+1,m2=vMonth+1,y2=vYear;if(m2>11){m2=0;y2++;}cells.push({d:e,m:m2,y:y2,other:true});}
+
+  cells.forEach(c=>{
+    const key = dKey(c.y,c.m,c.d);
+    const isT = c.d===TODAY.getDate()&&c.m===TODAY.getMonth()&&c.y===TODAY.getFullYear();
+    const uEvs = userEvs[key]||[];
+    const xlEv = xlEvs[key];
+    const hasAny = uEvs.length>0 || !!xlEv;
+    const cell = document.createElement('div');
+    cell.className = 'day-cell'+(c.other?' other-month':'')+(isT?' today':'')+(hasAny?' has-ev':'');
+    const n = document.createElement('div'); n.className='day-num'; n.textContent=c.d; cell.appendChild(n);
+    if(xlEv && !c.other) {
+      const chip = document.createElement('div');
+      const xd = !!xlDone[key];
+      chip.className = 'chip chip-xl'+(xd?' chip-done':'');
+      chip.textContent = (xd?'✓ ':'📌 ')+xlTitle(key);
+      cell.appendChild(chip);
+    }
+    uEvs.slice(0, xlEv?1:2).forEach(ev=>{
+      const chip = document.createElement('div');
+      chip.className = `chip ${ev.done?'chip-done':'c'+ev.color}`;
+      chip.textContent = (ev.time?fmt12(ev.time)+' ':'')+ev.title;
+      cell.appendChild(chip);
+    });
+    if(uEvs.length>(xlEv?1:2)){const m=document.createElement('div');m.className='more-chip';m.textContent=`+${uEvs.length-(xlEv?1:2)} more`;cell.appendChild(m);}
+    cell.addEventListener('click',()=>scrollToMsDay(key));
+    grid.appendChild(cell);
+  });
+
+  renderMonthSummary();
+}
+
+function renderMonthSummary() {
+  const body = document.getElementById('msSummaryBody'); body.innerHTML='';
+  const dim = new Date(vYear,vMonth+1,0).getDate();
+  const tk = todayKey();
+  let hasAnything = false;
+
+  for(let d=1;d<=dim;d++){
+    const key = dKey(vYear,vMonth,d);
+    const uEvs = userEvs[key]||[];
+    const xlEv = xlEvs[key];
+    if(!uEvs.length && !xlEv) continue;
+    hasAnything = true;
+    const dow = new Date(vYear,vMonth,d).getDay();
+    const isT = key===tk;
+    const row = document.createElement('div');
+    row.className='ms-day-row'; row.id='ms-day-'+key;
+
+    let dateHTML = `<div class="ms-date-num">${MONTHS[vMonth].slice(0,3)} ${d}${isT?'<span class="ms-today-badge">TODAY</span>':''}</div><div class="ms-date-day">${DAYS_S[dow]}</div>`;
+    let evHTML = '';
+
+    if(xlEv) {
+      const title = xlTitle(key);
+      const xd = !!xlDone[key];
+      evHTML += `<div class="ms-xl-item${xd?' done-item':''}" style="${xd?'opacity:.6':''}">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div class="ms-xl-title" style="${xd?'text-decoration:line-through;color:var(--muted)':''}">📌 ${esc(title)}</div>
+          <div style="display:flex;gap:5px;margin-left:auto;flex-shrink:0">
+            <button class="s-chk" style="width:22px;height:22px;font-size:.7rem;border-radius:50%;background:${xd?'var(--sage)':'transparent'};border:1.5px solid ${xd?'var(--sage)':'var(--border2)'};color:${xd?'#fff':'var(--muted)'};cursor:pointer;display:flex;align-items:center;justify-content:center" onclick="event.stopPropagation();toggleXlDone('${key}',event)">${xd?'✓':'○'}</button>
+            <button class="xl-edit-btn" onclick="event.stopPropagation();openXlModal('${key}')">✏️</button>
+          </div>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);white-space:pre-line;margin-top:3px">${esc(xlEv.slice(title.length).replace(/^\\n+/,'').trim())}</div>
+      </div>`;
+    }
+
+    uEvs.forEach((ev,idx)=>{
+      evHTML += `<div class="ms-user-item${ev.done?' done-item':''}" onclick="openDetail('${key}',${idx})">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:7px;height:7px;border-radius:50%;background:${COLORS[ev.color]};flex-shrink:0"></div>
+          <div class="ms-ui-title">${esc(ev.title)}</div>
+        </div>
+        ${ev.time?`<div class="ms-ui-time">⏰ ${fmt12(ev.time)}</div>`:''}
+        ${ev.notes?`<div class="ms-ui-notes">${esc(ev.notes.slice(0,80))}${ev.notes.length>80?'…':''}</div>`:''}
+        <button class="ms-edit-btn" onclick="event.stopPropagation();openAddModal('${key}',${idx})">✏️</button>
+      </div>`;
+    });
+
+    evHTML += `<div class="ms-add-day" onclick="openAddModalDate('${key}')">＋ Add schedule on ${MONTHS[vMonth].slice(0,3)} ${d}</div>`;
+    row.innerHTML = `<div class="ms-date-col">${dateHTML}</div><div class="ms-events-col">${evHTML}</div>`;
+    body.appendChild(row);
+  }
+
+  if(!hasAnything) {
+    body.innerHTML = `<div style="padding:24px 18px;color:var(--muted);font-style:italic;font-size:.84rem;text-align:center"><span style="font-size:1.5rem;display:block;margin-bottom:6px;opacity:.4">🌸</span>No events this month yet.</div>`;
+  }
+}
+
+function scrollToMsDay(key) {
+  const el = document.getElementById('ms-day-'+key);
+  if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'center'}),60);
+}
+
+function prevMonth(){vMonth--;if(vMonth<0){vMonth=11;vYear--;}renderCalendar();}
+function nextMonth(){vMonth++;if(vMonth>11){vMonth=0;vYear++;}renderCalendar();}
+function goToday(){vYear=TODAY.getFullYear();vMonth=TODAY.getMonth();renderCalendar();}
+
+// ═══════════════════ ADD/EDIT SCHEDULE ═══════════════════
+function openAddModal(key, idx) {
+  editKey=key||null; editIdx=(idx!=null)?idx:null;
+  const ev = (editKey&&editIdx!=null) ? userEvs[editKey][editIdx] : null;
+  document.getElementById('mHead').innerHTML = ev?'Edit <em>Schedule</em>':'New <em>Schedule</em>';
+  document.getElementById('mSub').textContent = '';
+  document.getElementById('evTitle').value = ev?ev.title:'';
+  document.getElementById('evDate').value  = editKey||dKey(vYear,vMonth,TODAY.getDate());
+  document.getElementById('evTime').value  = ev?ev.time:'';
+  document.getElementById('evNotes').value = ev?ev.notes:'';
+  selColor = ev?ev.color:0; buildSwatches();
+  document.getElementById('modalBg').classList.add('open');
+  setTimeout(()=>document.getElementById('evTitle').focus(),100);
+}
+function openAddModalDate(key) {
+  editKey=null; editIdx=null;
+  document.getElementById('mHead').innerHTML = 'New <em>Schedule</em>';
+  document.getElementById('evDate').value = key;
+  document.getElementById('evTitle').value='';document.getElementById('evTime').value='';document.getElementById('evNotes').value='';
+  selColor=0; buildSwatches();
+  document.getElementById('modalBg').classList.add('open');
+  setTimeout(()=>document.getElementById('evTitle').focus(),100);
+}
+function closeAddModal(){ document.getElementById('modalBg').classList.remove('open'); editKey=null; editIdx=null; }
+
+function buildSwatches() {
+  const sw=document.getElementById('swatches'); sw.innerHTML='';
+  COLORS.forEach((c,i)=>{ const d=document.createElement('div'); d.className='swatch'+(i===selColor?' active':''); d.style.background=c; d.onclick=()=>{selColor=i;buildSwatches();}; sw.appendChild(d); });
+}
+
+function saveSchedule() {
+  const title = document.getElementById('evTitle').value.trim();
+  if(!title){ const el=document.getElementById('evTitle'); el.style.borderColor='#e8927c'; el.focus(); setTimeout(()=>el.style.borderColor='',900); return; }
+  const key = document.getElementById('evDate').value || dKey(vYear,vMonth,1);
+  if(!userEvs[key]) userEvs[key]=[];
+  const newEv = {title, time:document.getElementById('evTime').value, notes:document.getElementById('evNotes').value.trim(), color:selColor, done:false};
+  if(editIdx!=null && editKey) { newEv.done=userEvs[editKey][editIdx].done; userEvs[editKey][editIdx]=newEv; }
+  else userEvs[key].push(newEv);
+  userEvs[key].sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+  saveAll(); closeAddModal();
+  const [y,m]=key.split('-').map(Number);
+  if(y===vYear&&(m-1)===vMonth) renderCalendar();
+  renderSummary();
+}
+
+// ═══════════════════ DETAIL MODAL ═══════════════════
+function openDetail(key, idx) {
+  detKey=key; detIdx=idx;
+  const ev = userEvs[key][idx];
+  const [y,m,dd]=key.split('-').map(Number);
+  const dow=new Date(y,m-1,dd).getDay();
+  document.getElementById('detBar').style.background=COLORS[ev.color];
+  const te=document.getElementById('detTitle'); te.textContent=ev.title; te.className='det-title'+(ev.done?' done-t':'');
+  document.getElementById('detDate').textContent=`${DAYS_F[dow]}, ${MONTHS[m-1]} ${dd}, ${y}`;
+  const tr=document.getElementById('detTimeRow'); if(ev.time){tr.style.display='flex';document.getElementById('detTimeVal').textContent=fmt12(ev.time);}else tr.style.display='none';
+  const nb=document.getElementById('detNotes'); if(ev.notes){nb.style.display='block';nb.textContent=ev.notes;}else nb.style.display='none';
+  const db=document.getElementById('detDoneBtn'); db.textContent=ev.done?'↩ Mark Undone':'✓ Mark Done'; db.className=ev.done?'btn-done-d undone':'btn-done-d';
+  document.getElementById('detailBg').classList.add('open');
+}
+function closeDetail(){ document.getElementById('detailBg').classList.remove('open'); }
+function toggleDetailDone() {
+  userEvs[detKey][detIdx].done=!userEvs[detKey][detIdx].done;
+  saveAll(); openDetail(detKey,detIdx); renderCalendar(); renderSummary();
+}
+function editFromDetail(){ const k=detKey,i=detIdx; closeDetail(); openAddModal(k,i); }
+function deleteFromDetail() {
+  if(!confirm('Delete this schedule?')) return;
+  userEvs[detKey].splice(detIdx,1);
+  if(!userEvs[detKey].length) delete userEvs[detKey];
+  saveAll(); closeDetail(); renderCalendar(); renderSummary();
+}
+
+// ═══════════════════ EXCEL EVENT EDIT ═══════════════════
+function openXlModal(key) {
+  xlEditKey=key;
+  const [y,m,dd]=key.split('-').map(Number);
+  document.getElementById('xlModalSub').textContent=`${MONTHS[m-1]} ${dd}, ${y}`;
+  document.getElementById('xlTitle').value = xlTitle(key);
+  document.getElementById('xlDetails').value = xlEvs[key]||'';
+  document.getElementById('xlModalBg').classList.add('open');
+}
+function closeXlModal(){ document.getElementById('xlModalBg').classList.remove('open'); xlEditKey=null; }
+function saveXlEdit() {
+  const title = document.getElementById('xlTitle').value.trim();
+  const details = document.getElementById('xlDetails').value.trim();
+  if(!xlEditKey) return;
+  xlEvs[xlEditKey] = title + (details?'\n'+details:'');
+  saveAll(); closeXlModal(); renderCalendar();
+}
+
+// ═══════════════════ SUMMARY ═══════════════════
+let sumMonthFilter = 'all';
+
+function renderSummary(){
+  const nk = todayKey();
+  let total=0, done=0, upcoming=0;
+  Object.entries(userEvs).forEach(([k,evs])=>evs.forEach(ev=>{
+    total++; if(ev.done) done++; else if(k>=nk) upcoming++;
+  }));
+  // Also count xl events in total/upcoming/done
+  Object.entries(xlEvs).forEach(([k])=>{ total++; if(xlDone[k]) done++; else if(k>=nk) upcoming++; });
+  // Find earliest upcoming month
+  const upcomingMonths = [...new Set(
+    [...Object.keys(userEvs).filter(k=>k>=nk), ...Object.keys(xlEvs).filter(k=>k>=nk)]
+    .map(k=>k.slice(0,7))
+  )].sort();
+  const firstUpcomingYm = upcomingMonths[0]||null;
+
+  const statsEl = document.getElementById('statsRow'); statsEl.innerHTML='';
+  [
+    {num:total, lbl:'Total', col:'var(--rose)', click:()=>{sumMonthFilter='all';renderSummary();}},
+    {num:done,  lbl:'Done ✓', col:'var(--sage)', click:()=>{
+      // scroll to first month that has done items
+      const doneYm=[...new Set(Object.entries(userEvs).filter(([,evs])=>evs.some(e=>e.done)).map(([k])=>k.slice(0,7)))].sort()[0];
+      if(doneYm){sumMonthFilter=doneYm;renderSummary();}
+    }},
+    {num:upcoming, lbl:'Upcoming 👆', col:'var(--gold)', click:()=>{
+      if(firstUpcomingYm){sumMonthFilter=firstUpcomingYm;renderSummary();}
+    }},
+  ].forEach(({num,lbl,col,click})=>{
+    const card=document.createElement('div'); card.className='stat-card';
+    card.style.cssText='cursor:pointer;transition:transform .15s,box-shadow .15s';
+    card.onmouseenter=()=>{card.style.transform='translateY(-2px)';card.style.boxShadow='0 6px 20px var(--sh2)';};
+    card.onmouseleave=()=>{card.style.transform='';card.style.boxShadow='';};
+    card.onclick=click;
+    card.innerHTML=`<div class="stat-num" style="color:${col}">${num}</div><div class="stat-lbl">${lbl}</div>`;
+    statsEl.appendChild(card);
+  });
+
+  // Combine ALL dates from userEvs + xlEvs
+  const allDates = [...new Set([...Object.keys(userEvs), ...Object.keys(xlEvs)])].sort();
+  const monthsWithData = [...new Set(allDates.map(k=>k.slice(0,7)))].sort();
+
+  // Month filter buttons
+  const mf = document.getElementById('sumMonthFilters'); mf.innerHTML='';
+  const allBtn = document.createElement('button'); allBtn.className='sum-mfbtn'+(sumMonthFilter==='all'?' active':'');
+  allBtn.textContent='All'; allBtn.onclick=()=>{sumMonthFilter='all';renderSummary();};
+  mf.appendChild(allBtn);
+  monthsWithData.forEach(ym=>{
+    const [,m]=ym.split('-').map(Number);
+    const btn=document.createElement('button'); btn.className='sum-mfbtn'+(sumMonthFilter===ym?' active':'');
+    btn.textContent=MONTHS[m-1].slice(0,3); btn.onclick=()=>{sumMonthFilter=ym;renderSummary();};
+    mf.appendChild(btn);
+  });
+
+  const filteredDates = sumMonthFilter==='all' ? allDates : allDates.filter(k=>k.startsWith(sumMonthFilter));
+  const c = document.getElementById('summaryList'); c.innerHTML='';
+  if(!filteredDates.length){c.innerHTML='<div class="no-sum"><span>🌸</span>No schedules found.</div>';return;}
+
+  // Group by month
+  const byMonth={};
+  filteredDates.forEach(key=>{
+    const ym=key.slice(0,7);
+    if(!byMonth[ym]) byMonth[ym]=[];
+    byMonth[ym].push(key);
+  });
+
+  Object.entries(byMonth).sort().forEach(([ym, dayKeys])=>{
+    const [y,m]=ym.split('-').map(Number);
+    // count totals for month header (xl events + user events)
+    let monthTotal=0, monthDone=0;
+    dayKeys.forEach(key=>{
+      if(xlEvs[key]){ monthTotal++; if(xlDone[key]) monthDone++; }
+      (userEvs[key]||[]).forEach(ev=>{ monthTotal++; if(ev.done) monthDone++; });
+    });
+
+    const mhdr = document.createElement('div'); mhdr.className='sum-month-hdr';
+    mhdr.innerHTML=`<div class="sum-month-title">🌸 ${MONTHS[m-1]} ${y}</div>
+      <div class="sum-month-meta">
+        <span class="sum-done-pill">✓ ${monthDone}/${monthTotal}</span>
+        <span class="tog open">▾</span>
+      </div>`;
+    const mbody = document.createElement('div'); mbody.className='sum-month-body';
+    mhdr.addEventListener('click',()=>{
+      const tog=mhdr.querySelector('.tog');
+      const open=tog.classList.contains('open');
+      tog.classList.toggle('open',!open);
+      mbody.style.display=open?'none':'block';
+    });
+
+    const mcard = document.createElement('div'); mcard.className='sum-card';
+
+    dayKeys.forEach(key=>{
+      const [y2,m2,dd]=key.split('-').map(Number);
+      const dow=new Date(y2,m2-1,dd).getDay();
+      const isT=key===nk;
+      const uEvList=userEvs[key]||[];
+      const xlEv=xlEvs[key];
+      const totalDay=(xlEv?1:0)+uEvList.length;
+      const xlDoneThis=xlEv&&xlDone[key]?1:0;
+      const doneDay=uEvList.filter(e=>e.done).length + xlDoneThis;
+
+      const grp=document.createElement('div'); grp.className='sum-group';
+      const hdr=document.createElement('div'); hdr.className='sum-dh';
+      hdr.innerHTML=`<div class="sum-dlbl">${isT?'🌟 Today — ':''}${DAYS_F[dow]}, ${MONTHS[m2-1]} ${dd}</div>
+        <div class="sum-dcnt">${doneDay}/${totalDay} done <span class="tog open">▾</span></div>`;
+      const iw=document.createElement('div'); iw.className='sum-items';
+      hdr.addEventListener('click',()=>{
+        const tog=hdr.querySelector('.tog');
+        const isOpen=tog.classList.contains('open');
+        tog.classList.toggle('open',!isOpen);
+        iw.style.display=isOpen?'none':'block';
+      });
+
+      // XL event row (calendar/pinned event)
+      if(xlEv){
+        const title=xlTitle(key);
+        const xDone=!!xlDone[key];
+        const xrow=document.createElement('div'); xrow.className='sum-row'+(xDone?' done':'');
+        xrow.style.cursor='pointer';
+        xrow.innerHTML=`<div class="s-dot" style="background:var(--gold)"></div>
+          <div class="s-title" style="color:var(--text2);${xDone?'text-decoration:line-through;opacity:.55':''}">📌 ${esc(title)}</div>
+          <button class="ms-edit-btn" style="opacity:1;position:static;margin-left:4px" onclick="event.stopPropagation();openXlModal('${key}')">✏️</button>
+          <div class="s-chk" style="background:${xDone?'var(--sage)':'transparent'};border-color:${xDone?'var(--sage)':'var(--border2)'};color:${xDone?'#fff':'var(--muted)'}" onclick="toggleXlDone('${key}',event)">${xDone?'✓':'○'}</div>`;
+        xrow.addEventListener('click',()=>{
+          vYear=y2;vMonth=m2-1;renderCalendar();
+          switchTab('calendar',document.querySelectorAll('.tab-btn')[0]);
+          setTimeout(()=>scrollToMsDay(key),200);
+        });
+        iw.appendChild(xrow);
+      }
+
+      // User event rows
+      uEvList.forEach((ev,ri)=>{
+        const row=document.createElement('div'); row.className='sum-row'+(ev.done?' done':'');
+        row.innerHTML=`<div class="s-dot" style="background:${COLORS[ev.color]}"></div>
+          <div class="s-title">${esc(ev.title)}</div>
+          ${ev.time?`<div class="s-time">${fmt12(ev.time)}</div>`:''}
+          <div class="s-chk" onclick="toggleDoneSummary('${key}',${ri},event)">${ev.done?'✓':'○'}</div>`;
+        row.addEventListener('click',()=>{
+          vYear=y2;vMonth=m2-1;renderCalendar();
+          switchTab('calendar',document.querySelectorAll('.tab-btn')[0]);
+          setTimeout(()=>openDetail(key,ri),250);
+        });
+        iw.appendChild(row);
+      });
+
+      grp.appendChild(hdr); grp.appendChild(iw); mcard.appendChild(grp);
+    });
+
+    mbody.appendChild(mcard);
+    c.appendChild(mhdr);
+    c.appendChild(mbody);
+  });
+}
+function toggleDoneSummary(key,idx,e){
+  e.stopPropagation(); userEvs[key][idx].done=!userEvs[key][idx].done;
+  saveAll(); renderSummary(); renderCalendar();
+}
+function toggleXlDone(key,e){
+  if(e) e.stopPropagation();
+  if(xlDone[key]) delete xlDone[key];
+  else xlDone[key]=true;
+  saveAll(); renderSummary(); renderCalendar();
+}
+
+// ═══════════════════ DRIVERS ═══════════════════
+// drvOpenDates = set of dates currently expanded
+const drvOpenDates = new Set();
+
+function renderDrivers() {
+  const c=document.getElementById('drvCards'); c.innerHTML='';
+  const grouped={};
+  drvData.forEach((d,i)=>{if(!grouped[d.date])grouped[d.date]=[];grouped[d.date].push({...d,_i:i});});
+  const dates=Object.keys(grouped).sort((a,b)=>b.localeCompare(a));
+
+  if(!dates.length){
+    c.innerHTML='<div class="no-drv">No driver records yet.<br>Click <strong>＋ Add Day</strong> to start.</div>';
+    return;
+  }
+
+  dates.forEach(date=>{
+    const [y,m,dd]=date.split('-').map(Number);
+    const dow=new Date(y,m-1,dd).getDay();
+    const isOpen=drvOpenDates.has(date);
+    const entries=grouped[date];
+    const card=document.createElement('div'); card.className='drv-card';
+
+    const hdr=document.createElement('div'); hdr.className='drv-date-hdr';
+    hdr.innerHTML=`
+      <div>
+        <div class="drv-date-lbl">${DAYS_F[dow]}, ${MONTHS[m-1]} ${dd}, ${y}</div>
+        <div style="font-size:.66rem;color:var(--muted);margin-top:1px">${entries.length} driver${entries.length!==1?'s':''}</div>
+      </div>
+      <div class="drv-date-ctrl">
+        <button class="add-btn" style="font-size:.7rem;padding:5px 10px;border-radius:10px" onclick="event.stopPropagation();openDrvDay('${date}')">✏️ Edit Day</button>
+        <button class="drv-del-date" onclick="event.stopPropagation();deleteDrvDate('${date}')">🗑</button>
+        <span class="tog ${isOpen?'open':''}">${isOpen?'▾':'▸'}</span>
+      </div>`;
+
+    const rows=document.createElement('div'); rows.className='drv-rows';
+    rows.style.display=isOpen?'block':'none';
+    hdr.addEventListener('click',()=>{
+      if(drvOpenDates.has(date)) drvOpenDates.delete(date);
+      else drvOpenDates.add(date);
+      renderDrivers();
+    });
+
+    const isDone = drvData.filter(d=>d.date===date).some(d=>d.done);
+    if(isDone) card.classList.add('day-done');
+
+    entries.forEach(entry=>{
+      const r=document.createElement('div'); r.className='drv-row';
+      r.innerHTML=`
+        <div class="drv-badge" style="${entry.done?'opacity:.5;text-decoration:line-through':''}">${esc(entry.driver)}</div>
+        <div class="drv-car-tag">🚗 ${esc(entry.car||'—')}</div>
+        <div class="drv-errand" style="white-space:pre-wrap;user-select:text;${entry.done?'opacity:.45;text-decoration:line-through':''}">${esc(entry.errand||'—')}</div>`;
+      rows.appendChild(r);
+    });
+
+    // Done toggle at bottom of rows
+    const doneBar=document.createElement('div');
+    doneBar.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 14px 10px;cursor:pointer';
+    doneBar.onclick=()=>toggleDrvDone(date);
+    const allDone=drvData.filter(d=>d.date===date).every(d=>d.done);
+    doneBar.innerHTML=`<div class="drv-done-chk ${allDone?'checked':''}">${allDone?'✓':''}</div>
+      <span style="font-size:.75rem;color:${allDone?'var(--sage)':'var(--muted)'};font-weight:700">${allDone?'Day Completed ✓':'Mark day as done'}</span>`;
+    rows.appendChild(doneBar);
+
+    card.appendChild(hdr); card.appendChild(rows); c.appendChild(card);
+  });
+}
+
+// Open modal for a full day (all people at once)
+function openDrvDay(date) {
+  const entries = drvData.filter(d=>d.date===date);
+  document.getElementById('drvDate').value = date;
+  updateDrvModalTitle();
+  // Populate people list
+  const list = document.getElementById('drvPeopleList'); list.innerHTML='';
+  if(entries.length){
+    entries.forEach(e=>addDrvPerson(e.driver, e.car, e.errand));
+  } else {
+    addDrvPerson();
+  }
+  document.getElementById('drvModalBg').classList.add('open');
+  setTimeout(()=>document.getElementById('drvDate').focus(),80);
+}
+
+function openAddDayModal(){
+  document.getElementById('drvDate').value='';
+  document.getElementById('drvPeopleList').innerHTML='';
+  document.getElementById('drvMSub').textContent='';
+  document.getElementById('drvMHead').innerHTML='Add <em>Driver Schedule</em>';
+  addDrvPerson();
+  document.getElementById('drvModalBg').classList.add('open');
+  setTimeout(()=>document.getElementById('drvDate').focus(),80);
+}
+
+function updateDrvModalTitle(){
+  const d=document.getElementById('drvDate').value;
+  if(d){
+    const [y,m,dd]=d.split('-').map(Number);
+    const dow=new Date(y,m-1,dd).getDay();
+    document.getElementById('drvMSub').textContent=DAYS_F[dow]+', '+MONTHS[m-1]+' '+dd+', '+y;
+  } else {
+    document.getElementById('drvMSub').textContent='';
+  }
+}
+
+let _personCount=0;
+function addDrvPerson(driver='', car='', errand=''){
+  const id='dp'+(++_personCount);
+  const list=document.getElementById('drvPeopleList');
+  const num=list.children.length+1;
+  const div=document.createElement('div'); div.className='drv-person-row'; div.id=id;
+  div.innerHTML=`
+    <div class="drv-person-num">
+      <span>Person ${num}</span>
+      <button class="drv-rm-btn" onclick="removeDrvPerson('${id}')" title="Remove">✕</button>
+    </div>
+    <div class="frow"><label>Driver Name *</label><input type="text" class="dp-name" placeholder="e.g. Benjie" value="${esc(driver)}"/></div>
+    <div class="frow"><label>Car / Vehicle</label><input type="text" class="dp-car" placeholder="e.g. Grandia" value="${esc(car)}"/></div>
+    <div class="frow drv-person-errand"><label>Errand / Schedule</label><textarea class="dp-errand" placeholder="Details of assignment…" style="min-height:64px">${esc(errand)}</textarea></div>`;
+  list.appendChild(div);
+  if(driver==='') setTimeout(()=>div.querySelector('.dp-name').focus(),60);
+}
+
+function removeDrvPerson(id){
+  const el=document.getElementById(id); if(!el)return;
+  el.remove();
+  // Renumber
+  document.querySelectorAll('.drv-person-num span').forEach((s,i)=>s.textContent='Person '+(i+1));
+}
+
+function closeDrvModal(){
+  document.getElementById('drvModalBg').classList.remove('open');
+  drvEditIdx=null;
+}
+
+function saveDrvDay(){
+  const date=document.getElementById('drvDate').value;
+  if(!date){
+    document.getElementById('drvDate').style.borderColor='#e8927c';
+    document.getElementById('drvDate').focus();
+    setTimeout(()=>document.getElementById('drvDate').style.borderColor='',900);
+    return;
+  }
+  const rows=document.querySelectorAll('#drvPeopleList .drv-person-row');
+  const newEntries=[];
+  let hasError=false;
+  rows.forEach(row=>{
+    const name=row.querySelector('.dp-name').value.trim();
+    if(!name){ row.querySelector('.dp-name').style.borderColor='#e8927c'; hasError=true; return; }
+    newEntries.push({
+      date,
+      driver: name,
+      car: row.querySelector('.dp-car').value.trim(),
+      errand: row.querySelector('.dp-errand').value.trim()
+    });
+  });
+  if(hasError){ setTimeout(()=>document.querySelectorAll('.dp-name').forEach(i=>i.style.borderColor=''),900); return; }
+  if(!newEntries.length){ alert('Add at least one person.'); return; }
+  // Remove all existing entries for this date, replace with new
+  drvData = drvData.filter(d=>d.date!==date);
+  drvData.push(...newEntries);
+  drvOpenDates.add(date);
+  saveAll(); closeDrvModal(); renderDrivers();
+}
+
+function deleteDrvEntry(idx) {
+  if(!confirm('Delete this driver entry?'))return;
+  drvData.splice(idx,1); saveAll(); renderDrivers();
+}
+function deleteDrvDate(date) {
+  if(!confirm('Delete all entries for '+date+'?'))return;
+  drvData=drvData.filter(d=>d.date!==date);
+  drvOpenDates.delete(date);
+  saveAll(); renderDrivers();
+}
+
+// ═══════════════════ RFID ═══════════════════
+function renderEasytrip() {
+  const g=document.getElementById('etGrid'); g.innerHTML='';
+  Object.entries(etData).forEach(([plate,info])=>{
+    const bal=parseFloat(info.balance)||0; const cls=bal>=3000?'high':bal>=1000?'mid':'low';
+    const card=document.createElement('div'); card.className='rfid-card';
+    card.innerHTML=`
+      <button class="rfid-edit-btn" onclick="openRfidModal('easytrip','${esc(plate)}')">✏️ Edit</button>
+      <div class="rfid-plate">${esc(plate)}</div>
+      <div class="rfid-date">${esc(info.date)}</div>
+      <div class="rfid-bal ${cls}">₱${bal.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="rfid-bal-lbl">Easytrip Balance</div>
+      <div class="rfid-detail">👤 <span>Username:</span> ${esc(info.username)}</div>
+      <div class="rfid-detail">🔢 <span>Account:</span> ${esc(info.account)}</div>`;
+    g.appendChild(card);
+  });
+}
+function renderAutosweep() {
+  const g=document.getElementById('asGrid'); g.innerHTML='';
+  Object.entries(asData).forEach(([plate,info])=>{
+    const bal=parseFloat(info.balance)||0; const cls=bal>=3000?'high':bal>=1000?'mid':'low';
+    const card=document.createElement('div'); card.className='rfid-card';
+    card.innerHTML=`
+      <button class="rfid-edit-btn" onclick="openRfidModal('autosweep','${esc(plate)}')">✏️ Edit</button>
+      <div class="rfid-plate">${esc(plate)}</div>
+      <div class="rfid-date">${esc(info.date)}</div>
+      <div class="rfid-bal ${cls}">₱${bal.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="rfid-bal-lbl">Autosweep Balance</div>
+      <div class="rfid-detail">💳 <span>Card:</span> ${esc(info.card)}</div>
+      <div class="rfid-detail">📧 <span>Email:</span> ${esc(info.email)}</div>`;
+    g.appendChild(card);
+  });
+}
+
+function openRfidModal(type, plate) {
+  rfidType=type; rfidEditPlate=plate;
+  const info=plate?(type==='easytrip'?etData[plate]:asData[plate]):null;
+  document.getElementById('rfidMHead').innerHTML=info?`Edit <em>${type==='easytrip'?'Easytrip':'Autosweep'}</em>`:`Add <em>${type==='easytrip'?'Easytrip':'Autosweep'}</em>`;
+  document.getElementById('rfidPlate').value=plate||''; document.getElementById('rfidPlate').readOnly=!!plate;
+  document.getElementById('rfidBal').value=info?info.balance:'';
+  document.getElementById('rfidDate').value=info?info.date:'';
+  if(type==='easytrip'){
+    document.getElementById('rfidEtFields').style.display='block';
+    document.getElementById('rfidAsFields').style.display='none';
+    document.getElementById('rfidAcct').value=info?info.account:'';
+    document.getElementById('rfidUser').value=info?info.username:'';
+  } else {
+    document.getElementById('rfidEtFields').style.display='none';
+    document.getElementById('rfidAsFields').style.display='block';
+    document.getElementById('rfidCard').value=info?info.card:'';
+    document.getElementById('rfidAcct2').value=info?info.account:'';
+    document.getElementById('rfidEmail').value=info?info.email:'';
+  }
+  document.getElementById('rfidModalBg').classList.add('open');
+}
+function closeRfidModal(){ document.getElementById('rfidModalBg').classList.remove('open'); rfidType=null; rfidEditPlate=null; }
+function saveRfid() {
+  const plate=document.getElementById('rfidPlate').value.trim();
+  if(!plate){alert('Plate number is required.');return;}
+  const bal=parseFloat(document.getElementById('rfidBal').value)||0;
+  const date=document.getElementById('rfidDate').value.trim();
+  if(rfidType==='easytrip'){
+    // If editing with a new key (old plate changed), remove old
+    if(rfidEditPlate&&rfidEditPlate!==plate) delete etData[rfidEditPlate];
+    etData[plate]={balance:bal,date,account:document.getElementById('rfidAcct').value.trim(),username:document.getElementById('rfidUser').value.trim()};
+    saveAll(); closeRfidModal(); renderEasytrip();
+  } else {
+    if(rfidEditPlate&&rfidEditPlate!==plate) delete asData[rfidEditPlate];
+    asData[plate]={balance:bal,date,card:document.getElementById('rfidCard').value.trim(),account:document.getElementById('rfidAcct2').value.trim(),email:document.getElementById('rfidEmail').value.trim()};
+    saveAll(); closeRfidModal(); renderAutosweep();
+  }
+}
+
+// ═══════════════════ MONITORING ═══════════════════
+const MON_EVENTS = {"2026-01-30": [{"title": "Pag-Ibig Req. Deadline", "notes": "Req. 01.30.26", "category": "gov"}, {"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Jan", "category": "salary"}], "2026-02-24": [{"title": "Pag-Ibig Contribution", "notes": "Contri. 02.24", "category": "gov"}], "2026-03-30": [{"title": "PhilHealth Deadline Q1", "notes": "January–March contribution", "category": "gov"}, {"title": "SSS Deadline Q1", "notes": "January–March contribution", "category": "gov"}, {"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Mar", "category": "salary"}], "2026-06-30": [{"title": "PhilHealth Deadline Q2", "notes": "April–June contribution", "category": "gov"}, {"title": "SSS Deadline Q2", "notes": "April–June contribution", "category": "gov"}, {"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Jun", "category": "salary"}], "2026-09-30": [{"title": "PhilHealth Deadline Q3", "notes": "July–September contribution", "category": "gov"}, {"title": "SSS Deadline Q3", "notes": "July–September contribution", "category": "gov"}, {"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Sep", "category": "salary"}], "2026-12-29": [{"title": "PhilHealth Deadline Q4", "notes": "October–December contribution", "category": "gov"}, {"title": "SSS Deadline Q4", "notes": "October–December contribution", "category": "gov"}], "2026-03-01": [{"title": "Aircon Cleaning – Boss & Boss Paul Office", "notes": "Every 3 months: Mar, Jun, Sep, Dec", "category": "aircon"}, {"title": "Driver Salary Cutoff", "notes": "Week: Feb 23 – Mar 1", "category": "salary"}], "2026-06-01": [{"title": "Aircon Cleaning – Boss & Boss Paul Office", "notes": "Every 3 months: Mar, Jun, Sep, Dec", "category": "aircon"}], "2026-09-01": [{"title": "Aircon Cleaning – Boss & Boss Paul Office", "notes": "Every 3 months: Mar, Jun, Sep, Dec", "category": "aircon"}], "2026-12-01": [{"title": "Aircon Cleaning – Boss & Boss Paul Office", "notes": "Every 3 months: Mar, Jun, Sep, Dec", "category": "aircon"}], "2026-02-01": [{"title": "Aircon Cleaning – Pasolo", "notes": "Every 4–6 months. Ask Boss Paul. Feb, Jul, Nov", "category": "aircon"}, {"title": "Driver Salary Cutoff", "notes": "Week: Jan 26 – Feb 1", "category": "salary"}], "2026-07-01": [{"title": "Aircon Cleaning – Pasolo", "notes": "Every 4–6 months. Ask Boss Paul. Feb, Jul, Nov", "category": "aircon"}], "2026-11-01": [{"title": "Aircon Cleaning – Pasolo", "notes": "Every 4–6 months. Ask Boss Paul. Feb, Jul, Nov", "category": "aircon"}], "2026-01-10": [{"title": "Grandia – Change Oil", "notes": "10:30am Toyota Balintawak – look for Ms. Dhea", "category": "car"}], "2026-01-12": [{"title": "Geely – Change Oil", "notes": "Quezon Ave. – look for Ms. Joy – Kuya Benjie", "category": "car"}], "2026-01-16": [{"title": "Isuzu Pick Up – KM Check", "notes": "Di natuloy – mataas pa ang odometer", "category": "car"}], "2026-01-23": [{"title": "Red Innova – Change Oil", "notes": "Toyota Balintawak – Benjie. Done pero need bumalik – palitan ng brake pad", "category": "car"}], "2026-02-12": [{"title": "Isuzu Pick Up – Change Oil", "notes": "Kerf – babalik ulit kasi may need ayusin pero tapos na ang change oil", "category": "car"}], "2026-01-21": [{"title": "Converge Bill Due (…4941)", "notes": "Billing period: 12.22.25–01.21.26", "category": "bills"}], "2026-02-21": [{"title": "Converge Bill Due (…4941)", "notes": "Billing period: 01.22.26–02.21.26", "category": "bills"}], "2026-03-21": [{"title": "Converge Bill Due (…4941)", "notes": "Billing period: 02.22.26–03.21.26", "category": "bills"}], "2026-02-02": [{"title": "RCBC JCB SOA", "notes": "RCBC JCB Platinum …3009 – Statement of Account", "category": "bills"}], "2026-02-04": [{"title": "BPI Card Activation", "notes": "Dumating – after 2 days ang activation", "category": "bills"}], "2026-01-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Jan", "category": "salary"}], "2026-02-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Feb", "category": "salary"}, {"title": "Driver Salary Cutoff", "notes": "Week: Feb 9–15", "category": "salary"}], "2026-02-28": [{"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Feb", "category": "salary"}], "2026-03-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Mar", "category": "salary"}, {"title": "Driver Salary Cutoff", "notes": "Week: Mar 9–15", "category": "salary"}], "2026-04-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Apr", "category": "salary"}], "2026-04-30": [{"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Apr", "category": "salary"}], "2026-05-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of May", "category": "salary"}], "2026-05-30": [{"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of May", "category": "salary"}], "2026-06-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Jun", "category": "salary"}], "2026-07-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Jul", "category": "salary"}], "2026-07-30": [{"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Jul", "category": "salary"}], "2026-08-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Aug", "category": "salary"}], "2026-08-30": [{"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Aug", "category": "salary"}], "2026-09-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Sep", "category": "salary"}], "2026-10-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Oct", "category": "salary"}], "2026-10-30": [{"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Oct", "category": "salary"}], "2026-11-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Nov", "category": "salary"}], "2026-11-30": [{"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Nov", "category": "salary"}], "2026-12-15": [{"title": "Househelper Salary (15th)", "notes": "Monthly salary release – 15th of Dec", "category": "salary"}], "2026-12-30": [{"title": "Househelper Salary (30th)", "notes": "Monthly salary release – 30th of Dec", "category": "salary"}], "2026-01-04": [{"title": "Driver Salary Cutoff", "notes": "Week: Dec 29 – Jan 4", "category": "salary"}], "2026-01-11": [{"title": "Driver Salary Cutoff", "notes": "Week: Jan 5–11", "category": "salary"}], "2026-01-18": [{"title": "Driver Salary Cutoff", "notes": "Week: Jan 12–18", "category": "salary"}], "2026-01-25": [{"title": "Driver Salary Cutoff", "notes": "Week: Jan 19–25", "category": "salary"}], "2026-02-08": [{"title": "Driver Salary Cutoff", "notes": "Week: Feb 2–8", "category": "salary"}], "2026-02-22": [{"title": "Driver Salary Cutoff", "notes": "Week: Feb 16–22", "category": "salary"}], "2026-03-08": [{"title": "Driver Salary Cutoff", "notes": "Week: Mar 2–8", "category": "salary"}], "2026-03-22": [{"title": "Driver Salary Cutoff", "notes": "Week: Mar 16–22", "category": "salary"}], "2026-03-29": [{"title": "Driver Salary Cutoff", "notes": "Week: Mar 23–29", "category": "salary"}]};
+const MON_CATS = {
+  gov:    { label: 'Gov. Benefits', color: '#c4a8d4', bg: '#ecdff5' },
+  aircon: { label: 'Aircon Cleaning', color: '#7bb8d8', bg: '#d5e8f8' },
+  car:    { label: 'Car Maintenance', color: '#d4a96a', bg: '#fdf0d5' },
+  bills:  { label: 'Bills / Utilities', color: '#89b5a0', bg: '#d8f0e8' },
+  salary: { label: 'Salary / Paydate', color: '#e8927c', bg: '#fde8e3' },
+};
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let monCatFilter = 'all';
+let monMonthFilter = 'all';
+
+function renderMonitoring() {
+  const leg = document.getElementById('monLegend'); leg.innerHTML='';
+  const allBtn = document.createElement('div'); allBtn.className='mon-leg-item'+(monCatFilter==='all'?' active':'');
+  if(monCatFilter==='all') allBtn.style.background='var(--rose)';
+  allBtn.textContent='All'; allBtn.onclick=()=>{monCatFilter='all';renderMonitoring();};
+  leg.appendChild(allBtn);
+  Object.entries(MON_CATS).forEach(([k,v])=>{
+    const item=document.createElement('div'); item.className='mon-leg-item'+(monCatFilter===k?' active':'');
+    if(monCatFilter===k) item.style.background=v.color;
+    item.innerHTML=`<div class="mon-leg-dot" style="background:${v.color}"></div>${v.label}`;
+    item.onclick=()=>{monCatFilter=k;renderMonitoring();};
+    leg.appendChild(item);
+  });
+  const mf=document.getElementById('monFilters'); mf.innerHTML='';
+  const allm=document.createElement('button'); allm.className='mon-fbtn'+(monMonthFilter==='all'?' active':'');
+  allm.textContent='All Months'; allm.onclick=()=>{monMonthFilter='all';renderMonitoring();};
+  mf.appendChild(allm);
+  for(let m=0;m<12;m++){
+    const btn=document.createElement('button'); btn.className='mon-fbtn'+(monMonthFilter===(m+1)?' active':'');
+    btn.textContent=MONTHS_SHORT[m]; btn.onclick=(()=>{const mm=m+1;return()=>{monMonthFilter=mm;renderMonitoring();}})();
+    mf.appendChild(btn);
+  }
+  const list=document.getElementById('monList'); list.innerHTML='';
+  const dates=Object.keys(MON_EVENTS).filter(k=>{
+    const[y,m]=k.split('-').map(Number);
+    if(monMonthFilter!=='all'&&m!==monMonthFilter) return false;
+    if(monCatFilter==='all') return true;
+    return MON_EVENTS[k].some(ev=>ev.category===monCatFilter);
+  }).sort();
+  if(!dates.length){list.innerHTML='<div style="color:var(--muted);text-align:center;padding:32px;font-style:italic">No events match the filter.</div>';return;}
+  dates.forEach(key=>{
+    const [y,m,dd]=key.split('-').map(Number);
+    const dow=new Date(y,m-1,dd).getDay();
+    const evs=MON_EVENTS[key].filter(ev=>monCatFilter==='all'||ev.category===monCatFilter);
+    if(!evs.length) return;
+    const isT=key===todayKey();
+    const card=document.createElement('div'); card.className='mon-card';
+    const hdr=document.createElement('div'); hdr.className='mon-date-hdr';
+    hdr.innerHTML=`<div><span class="mon-date-lbl">${isT?'🌟 ':''}${MONTHS[m-1]} ${dd}, ${y}</span><span class="mon-date-dow"> — ${DAYS_S[dow]}</span></div><span class="tog open">▾</span>`;
+    hdr.addEventListener('click',()=>{const tog=hdr.querySelector('.tog');const op=tog.classList.contains('open');tog.classList.toggle('open',!op);rows.style.display=op?'none':'block';});
+    const rows=document.createElement('div'); rows.className='mon-rows';
+    evs.forEach(ev=>{
+      const cat=MON_CATS[ev.category]||{color:'#aaa',bg:'#eee',label:ev.category};
+      const r=document.createElement('div'); r.className='mon-row'; r.style.cursor='pointer';
+      r.innerHTML=`<div class="mon-cat-dot" style="background:${cat.color}"></div>
+        <div class="mon-row-info"><div class="mon-row-title">${esc(ev.title)}</div>${ev.notes?`<div class="mon-row-notes">${esc(ev.notes)}</div>`:''}</div>
+        <div class="mon-cat-badge" style="background:${cat.bg};color:${cat.color}">${cat.label}</div>`;
+      r.onclick=()=>{
+        const[y2,m2]=key.split('-').map(Number);
+        vYear=y2;vMonth=m2-1;renderCalendar();
+        switchTab('calendar',document.querySelectorAll('.tab-btn')[0]);
+        setTimeout(()=>scrollToMsDay(key),150);
+      };
+      rows.appendChild(r);
+    });
+    card.appendChild(hdr); card.appendChild(rows); list.appendChild(card);
+  });
+}
+
+// ═══════════════════ CALENDAR SEARCH ═══════════════════
+function runCalSearch(q){
+  const wrap=document.getElementById('calSearchResults');
+  const clr=document.getElementById('calSearchClear');
+  q=q.trim().toLowerCase();
+  clr.style.display=q?'block':'none';
+  if(!q){wrap.style.display='none';return;}
+  // Gather all events
+  const results=[];
+  // XL events
+  Object.entries(xlEvs).forEach(([key,val])=>{
+    const title=xlTitle(key).toLowerCase();
+    const detail=(val||'').toLowerCase();
+    if(title.includes(q)||detail.includes(q)){
+      const [y,m,dd]=key.split('-').map(Number);
+      results.push({key,title:xlTitle(key),date:`${MONTHS[m-1]} ${dd}, ${y}`,color:'gold',isXl:true});
+    }
+  });
+  // User events
+  Object.entries(userEvs).forEach(([key,evs])=>{
+    evs.forEach((ev,ri)=>{
+      if((ev.title||'').toLowerCase().includes(q)||(ev.notes||'').toLowerCase().includes(q)){
+        const [y,m,dd]=key.split('-').map(Number);
+        results.push({key,title:ev.title,date:`${MONTHS[m-1]} ${dd}, ${y}`,color:COLORS[ev.color],isXl:false,ri});
+      }
+    });
+  });
+  results.sort((a,b)=>a.key.localeCompare(b.key));
+  wrap.style.display='block';
+  wrap.innerHTML='';
+  const box=document.createElement('div'); box.className='cal-search-results';
+  if(!results.length){box.innerHTML='<div class="cal-sr-none">No events found for "'+esc(q)+'"</div>';wrap.appendChild(box);return;}
+  results.slice(0,20).forEach(r=>{
+    const item=document.createElement('div'); item.className='cal-sr-item';
+    item.innerHTML=`<div class="cal-sr-dot" style="background:${r.isXl?'var(--gold)':r.color}"></div>
+      <div class="cal-sr-info">
+        <div class="cal-sr-title">${r.isXl?'📌 ':''}${esc(r.title)}</div>
+        <div class="cal-sr-date">${r.date}</div>
+      </div>`;
+    item.onclick=()=>{
+      clearCalSearch();
+      const[y2,m2]=r.key.split('-').map(Number);
+      vYear=y2;vMonth=m2-1;renderCalendar();
+      setTimeout(()=>{
+        if(r.isXl) scrollToMsDay(r.key);
+        else openDetail(r.key,r.ri);
+      },200);
+    };
+    box.appendChild(item);
+  });
+  if(results.length>20){const more=document.createElement('div');more.className='cal-sr-none';more.textContent=`+${results.length-20} more results…`;box.appendChild(more);}
+  wrap.appendChild(box);
+}
+function clearCalSearch(){
+  document.getElementById('calSearchInput').value='';
+  document.getElementById('calSearchClear').style.display='none';
+  document.getElementById('calSearchResults').style.display='none';
+}
+
+// ─── RESTORE DRIVER DATA ───
+function restoreDrvData(){
+  if(!confirm('Restore all driver data from the original source? This will merge original data back without deleting entries you added manually.')) return;
+  // Merge: keep user-added entries (dates not in BASE), restore BASE entries for BASE dates
+  const baseDates = new Set(DRV_BASE.map(d=>d.date));
+  const userAdded = drvData.filter(d=>!baseDates.has(d.date));
+  drvData = [...DRV_BASE, ...userAdded];
+  saveAll(); renderDrivers();
+  alert('Driver data restored! ' + drvData.length + ' entries loaded.');
+}
+
+// ─── DRIVER DONE ───
+function toggleDrvDone(date){
+  const entries=drvData.filter(d=>d.date===date);
+  const allDone=entries.every(d=>d.done);
+  entries.forEach(e=>e.done=!allDone);
+  drvOpenDates.add(date);
+  saveAll(); renderDrivers();
+}
+
+// ─── PDF / PRINT ───
+let pdfSelectedMonth = null;
+const MFULL_PDF=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DFULL_PDF=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function openPdfModal(){
+  // Gather all months that have ANY data (calendar events OR driver schedule)
+  const months = new Set();
+  Object.keys(xlEvs).forEach(k=>months.add(k.slice(0,7)));
+  Object.keys(userEvs).forEach(k=>months.add(k.slice(0,7)));
+  const sorted = [...months].sort();
+
+  pdfSelectedMonth = null;
+  document.getElementById('pdfPrintBtn').disabled = true;
+  const grid = document.getElementById('pdfMonthGrid');
+  grid.innerHTML = '';
+
+  if(!sorted.length){
+    grid.innerHTML='<div style="color:var(--muted);font-size:.78rem;grid-column:1/-1;text-align:center;padding:12px">No schedule data found.</div>';
+    document.getElementById('pdfModalBg').classList.add('open');
+    return;
+  }
+
+  sorted.forEach(ym=>{
+    const [y,mo] = ym.split('-').map(Number);
+    const xlCount = Object.keys(xlEvs).filter(k=>k.startsWith(ym)).length;
+    const userCount = Object.keys(userEvs).filter(k=>k.startsWith(ym)).reduce((s,k)=>s+(userEvs[k]||[]).length,0);
+    const total = xlCount + userCount;
+    const parts = total > 0 ? [`${total} event${total!==1?'s':''}`] : [];
+
+    const btn = document.createElement('button');
+    btn.className = 'pdf-mbtn has-data';
+    btn.innerHTML = `<strong>${MFULL_PDF[mo-1]}</strong><br><span style="font-size:.63rem;opacity:.7">${y}${parts.length?' · '+parts.join(' · '):''}</span>`;
+    btn.onclick = ()=>{
+      pdfSelectedMonth = ym;
+      grid.querySelectorAll('.pdf-mbtn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('pdfPrintBtn').disabled = false;
+    };
+    grid.appendChild(btn);
+  });
+
+  document.getElementById('pdfModalBg').classList.add('open');
+}
+
+function closePdfModal(){ document.getElementById('pdfModalBg').classList.remove('open'); }
+
+function doPdfPrint(){
+  if(!pdfSelectedMonth) return;
+  const [y,mo] = pdfSelectedMonth.split('-').map(Number);
+  const dateStr = new Date().toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'});
+
+  // Only calendar events (xl + user), no drivers
+  const allDates = [...new Set([
+    ...Object.keys(xlEvs).filter(k=>k.startsWith(pdfSelectedMonth)),
+    ...Object.keys(userEvs).filter(k=>k.startsWith(pdfSelectedMonth))
+  ])].sort();
+
+  let rows = '';
+  allDates.forEach(date=>{
+    const [dy,dm,dd] = date.split('-').map(Number);
+    const dow = new Date(dy,dm-1,dd).getDay();
+    const xlEv = xlEvs[date];
+    const uEvs = userEvs[date]||[];
+    if(!xlEv && !uEvs.length) return;
+
+    let dayItems = '';
+
+    if(xlEv){
+      const title = xlTitle(date);
+      const notes = (xlEv||'').split('\n').slice(1).join('\n').trim();
+      dayItems += `<div class="pe-item pe-pinned">
+        <div class="pe-dot" style="background:#c8a040"></div>
+        <div class="pe-info">
+          <div class="pe-title">📌 ${esc(title)}</div>
+          ${notes?`<div class="pe-notes">${esc(notes)}</div>`:''}
+        </div>
+      </div>`;
+    }
+
+    uEvs.forEach(ev=>{
+      dayItems += `<div class="pe-item${ev.done?' pe-done':''}">
+        <div class="pe-dot" style="background:${COLORS[ev.color]||'#d4705a'}"></div>
+        <div class="pe-info">
+          <div class="pe-title">${ev.time?`<span class="pe-time">${fmt12(ev.time)}</span> `:''}${esc(ev.title)}${ev.done?' ✓':''}</div>
+          ${ev.notes?`<div class="pe-notes">${esc(ev.notes)}</div>`:''}
+        </div>
+      </div>`;
+    });
+
+    rows += `<div class="pe-day">
+      <div class="pe-day-hdr">
+        <span class="pe-dow">${DFULL_PDF[dow]}</span>
+        <span class="pe-date">${MFULL_PDF[dm-1]} ${dd}</span>
+      </div>
+      <div class="pe-items">${dayItems}</div>
+    </div>`;
+  });
+
+  if(!rows){ alert('No events for this month.'); return; }
+
+  const printHTML = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>${MFULL_PDF[mo-1]} ${y} — Schedule</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size:11pt; color:#222; background:#fff; padding:28pt 32pt; }
+    .pe-header { border-bottom:3pt solid #d4705a; padding-bottom:10pt; margin-bottom:20pt; }
+    .pe-header h1 { font-size:22pt; color:#222; font-weight:800; }
+    .pe-header .pe-gen { font-size:9pt; color:#888; margin-top:4pt; }
+    .pe-day { margin-bottom:16pt; break-inside:avoid; }
+    .pe-day-hdr { display:flex; align-items:baseline; gap:10pt; border-bottom:1pt solid #eee; padding-bottom:4pt; margin-bottom:8pt; }
+    .pe-dow { font-size:10pt; font-weight:800; color:#d4705a; text-transform:uppercase; letter-spacing:.5pt; min-width:72pt; }
+    .pe-date { font-size:11pt; font-weight:600; color:#444; }
+    .pe-items { padding-left:8pt; display:flex; flex-direction:column; gap:6pt; }
+    .pe-item { display:flex; gap:9pt; align-items:flex-start; }
+    .pe-dot { width:7pt; height:7pt; border-radius:50%; flex-shrink:0; margin-top:3pt; }
+    .pe-info { flex:1; }
+    .pe-title { font-size:10.5pt; font-weight:600; color:#222; }
+    .pe-time { font-size:9pt; color:#888; font-weight:400; }
+    .pe-notes { font-size:9pt; color:#666; margin-top:2pt; white-space:pre-wrap; font-style:italic; padding-left:4pt; }
+    .pe-done .pe-title { text-decoration:line-through; color:#aaa; }
+    .pe-pinned .pe-title { color:#8a6820; }
+    @media print {
+      body { padding:14pt 18pt; }
+      .pe-day { break-inside:avoid; }
+    }
+  </style>
+  </head><body>
+  <div class="pe-header">
+    <h1>${MFULL_PDF[mo-1]} ${y}</h1>
+    <div class="pe-gen">Generated ${dateStr}</div>
+  </div>
+  ${rows}
+  </body></html>`;
+
+  const win = window.open('','_blank','width=800,height=900');
+  win.document.write(printHTML);
+  win.document.close();
+  win.onload = ()=>{ win.focus(); win.print(); };
+  closePdfModal();
+}
+
+// ═══════════════════ INIT ═══════════════════
+buildSwatches();
+
+// Show loading indicator
+document.getElementById('calGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:.85rem">🌸 Loading your schedule…</div>';
+
+// Load from Firestore, fall back to localStorage if offline
+DOC_REF.get().then(doc=>{
+  if(doc.exists){
+    const d = doc.data();
+    if(d.userEvs) userEvs = d.userEvs;
+    if(d.xlEvs && Object.keys(d.xlEvs).length) xlEvs = d.xlEvs;
+    if(d.xlDone) xlDone = d.xlDone;
+    if(d.drvData && d.drvData.length) drvData = d.drvData;
+    if(d.etData && d.etData.length) etData = d.etData;
+    if(d.asData && d.asData.length) asData = d.asData;
+    // Mirror to localStorage
+    saveData('sharon_v4', userEvs);
+    saveData('sharon_xl_evs', xlEvs);
+    saveData('sharon_xl_done', xlDone);
+    saveData('sharon_drv', drvData);
+    saveData('sharon_et', etData);
+    saveData('sharon_as', asData);
+  }
+}).catch(e=>{
+  console.warn('Firestore load failed, using localStorage:', e);
+}).finally(()=>{
+  renderCalendar(); renderSummary();
+});
+
+document.getElementById('evTitle').addEventListener('keydown',e=>{if(e.key==='Enter')saveSchedule();});
+</script>
+
+<!-- PDF MONTH PICKER MODAL -->
+<div class="pdf-modal-bg" id="pdfModalBg" onclick="if(event.target===this)closePdfModal()">
+  <div class="pdf-modal" onclick="event.stopPropagation()">
+    <h2>Print <em>Monthly PDF</em></h2>
+    <div class="pdf-modal-sub">Select a month — includes calendar events + driver schedule</div>
+    <div class="pdf-month-grid" id="pdfMonthGrid"></div>
+    <div class="pdf-footer">
+      <button class="btn-cancel" onclick="closePdfModal()">Cancel</button>
+      <button class="btn-save" id="pdfPrintBtn" onclick="doPdfPrint()" disabled>🖨 Print / Save PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRINT AREA -->
+<div id="printArea"></div>
+
+</body>
+</html>
