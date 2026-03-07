@@ -364,6 +364,51 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 .print-drv-block { margin:6pt 0 4pt 10pt; padding:4pt 0 4pt 8pt; border-left:2pt solid #e8a87c; }
 .print-drv-hdr { font-size:9pt; font-weight:700; color:#c07040; margin-bottom:3pt; }
 
+
+/* ── Notes tab ── */
+.notes-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.notes-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+.note-card {
+  background: var(--note-color, #fffef5);
+  border-radius: 4px;
+  padding: 18px 16px 12px;
+  position: relative;
+  box-shadow: 2px 3px 8px rgba(0,0,0,.10), inset 0 0 0 1px rgba(0,0,0,.06);
+  /* Lined paper effect */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 27px,
+    rgba(0,0,0,.07) 27px,
+    rgba(0,0,0,.07) 28px
+  );
+  background-size: 100% 28px;
+  min-height: 140px;
+  transition: transform .15s, box-shadow .15s;
+}
+.note-card:hover { transform: translateY(-2px); box-shadow: 3px 6px 16px rgba(0,0,0,.13), inset 0 0 0 1px rgba(0,0,0,.08); }
+.note-card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+.note-card-title { font-weight:700; font-size:.9rem; color:#3a3020; flex:1; line-height:1.4; }
+.note-card-actions { display:flex; gap:2px; flex-shrink:0; }
+.note-card-actions button { background:none; border:none; cursor:pointer; font-size:.82rem; padding:2px 4px; border-radius:4px; opacity:.6; transition:opacity .15s; }
+.note-card-actions button:hover { opacity:1; background:rgba(0,0,0,.07); }
+.note-card-body { font-size:.83rem; color:#4a3f30; line-height:1.75; white-space:pre-wrap; word-break:break-word; margin-bottom:8px; }
+.note-card-date { font-size:.68rem; color:#a09070; text-align:right; margin-top:auto; }
+
+/* ── Pass records ── */
+.pass-rec-row { background:#fafafa; border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:8px; position:relative; }
+.pass-rec-meta { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.pass-rec-type { font-size:.75rem; font-weight:700; padding:2px 8px; border-radius:20px; }
+.pass-rec-type.load { background:#e8f5e9; color:#2e7d32; }
+.pass-rec-type.use { background:#fce4ec; color:#b71c1c; }
+.pass-rec-date { font-size:.78rem; color:var(--muted); }
+.pass-rec-amount { font-size:1rem; font-weight:700; margin-bottom:2px; }
+.pass-rec-amount.load { color:#2e7d32; }
+.pass-rec-amount.use { color:#c62828; }
+.pass-rec-bal { font-size:.75rem; color:var(--muted); }
+.pass-rec-note { font-size:.78rem; color:#666; margin-top:4px; font-style:italic; }
+.pass-rec-del { position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; font-size:.8rem; opacity:.4; transition:opacity .15s; }
+.pass-rec-del:hover { opacity:1; }
 </style>
 </head>
 <body>
@@ -395,6 +440,7 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
       <button class="tab-btn" onclick="switchTab('easytrip',this)">🛣️ Easytrip</button>
       <button class="tab-btn" onclick="switchTab('autosweep',this)">🏎️ Autosweep</button>
       <button class="tab-btn" onclick="switchTab('monitoring',this)">📊 Monitoring</button>
+      <button class="tab-btn" onclick="switchTab('notes',this)">📝 Notes</button>
     </div>
     <button onclick="openPdfModal()" style="flex-shrink:0;padding:10px 18px;border-radius:13px;border:none;background:linear-gradient(135deg,#7bb8d8,#5a9abf);color:#fff;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(90,154,191,.35);white-space:nowrap;transition:all .2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">🖨 PDF</button>
   </div>
@@ -476,6 +522,15 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
     </div>
     <div class="rfid-grid" id="asGrid"></div>
   </div>
+  <!-- NOTES TAB -->
+  <div class="tab-content" id="tab-notes">
+    <div class="notes-toolbar">
+      <div class="sec-title">📝 <em>Notes</em></div>
+      <button class="add-btn" onclick="openNoteModal(null)">＋ New Note</button>
+    </div>
+    <div class="notes-grid" id="notesGrid"></div>
+  </div>
+
   <!-- MONITORING TAB -->
   <div class="tab-content" id="tab-monitoring">
     <div class="rfid-header">
@@ -594,6 +649,7 @@ let editKey = null, editIdx = null, detKey = null, detIdx = null;
 let xlEditKey = null;
 let drvEditIdx = null; // index in drvData array (after sort)
 let rfidType = null, rfidEditPlate = null;
+let notesData = loadData('sharon_notes', []);  // [{id, title, body, color, pinned, createdAt}]
 
 // ─── PERSISTENT DATA ───
 // ── localStorage helpers ──
@@ -615,7 +671,7 @@ let _saveTimer = null;
 function saveToFirestore() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(()=>{
-    const payload = { userEvs, xlEvs, xlDone, drvData, etData, asData, updatedAt: new Date().toISOString() };
+    const payload = { userEvs, xlEvs, xlDone, drvData, etData, asData, etPass, asPass, notesData, updatedAt: new Date().toISOString() };
     if (DOC_REF) {
       DOC_REF.set(payload).catch(e=>console.warn('Firestore save failed:', e));
     } else if (window._saveToFirestoreModular) {
@@ -641,6 +697,8 @@ const ET_BASE = {"NIU 4271": {"account": "540001491769", "balance": 6575.0, "dat
 const AS_BASE = {"NIU 4271": {"card": "D125720", "account": "3648315", "balance": 3175.0, "date": "AS OF OCTOBER 21, 2025", "email": "mirah.lor@kskfoodproducts.com"}, "NAK 3769": {"card": "R594987", "account": "1078267", "balance": 0.0, "date": "AS OF OCTOBER 21, 2025", "email": "ujc.judy@gmail.com"}, "NIC 5906": {"card": "I096260", "account": "2604295", "balance": 9288.0, "date": "AS OF OCTOBER 21, 2025", "email": "ujc.judy@gmail.com"}, "SQE 717/NIB 8642": {"card": "I067455", "account": "2575162", "balance": 9013.0, "date": "AS OF OCTOBER 21, 2025", "email": "ujc.judy@gmail.com"}, "D3B 708/NIJ 5047": {"card": "I329239", "account": "2846673", "balance": 4460.0, "date": "AS OF OCTOBER 21, 2025", "email": "ujc.judy@gmail.com"}, "HY847B": {"card": "S079205", "account": "4712043", "balance": 11437.0, "date": "AS OF OCTOBER 21, 2025", "email": "mirah.lor@kskfoodproducts.com"}};
 let etData = loadData('sharon_et', ET_BASE);
 let asData = loadData('sharon_as', AS_BASE);
+let etPass = loadData('sharon_etpass', {});   // {plate: [{date,amount,type,balance,note}]}
+let asPass = loadData('sharon_aspass', {});
 
 function saveAll() {
   // localStorage (instant, offline backup)
@@ -650,6 +708,9 @@ function saveAll() {
   saveData('sharon_drv', drvData);
   saveData('sharon_et', etData);
   saveData('sharon_as', asData);
+  saveData('sharon_etpass', etPass);
+  saveData('sharon_aspass', asPass);
+  saveData('sharon_notes', notesData);
   // Firestore (persistent cloud)
   saveToFirestore();
 }
@@ -676,6 +737,7 @@ function switchTab(name, btn) {
   if(name==='easytrip') renderEasytrip();
   if(name==='autosweep') renderAutosweep();
   if(name==='monitoring') renderMonitoring();
+  if(name==='notes') renderNotes();
 }
 
 // ═══════════════════ CALENDAR ═══════════════════
@@ -1228,14 +1290,19 @@ function renderEasytrip() {
   Object.entries(etData).forEach(([plate,info])=>{
     const bal=parseFloat(info.balance)||0; const cls=bal>=3000?'high':bal>=1000?'mid':'low';
     const card=document.createElement('div'); card.className='rfid-card';
+    const etRec=(etPass[plate]||[]).slice(-1)[0];
     card.innerHTML=`
-      <button class="rfid-edit-btn" onclick="openRfidModal('easytrip','${esc(plate)}')">✏️ Edit</button>
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:6px">
+        <button class="rfid-edit-btn" onclick="openPassModal('easytrip','${esc(plate)}')">📋 Pass Records</button>
+        <button class="rfid-edit-btn" onclick="openRfidModal('easytrip','${esc(plate)}')">✏️ Edit</button>
+      </div>
       <div class="rfid-plate">${esc(plate)}</div>
       <div class="rfid-date">${esc(info.date)}</div>
       <div class="rfid-bal ${cls}">₱${bal.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <div class="rfid-bal-lbl">Easytrip Balance</div>
       <div class="rfid-detail">👤 <span>Username:</span> ${esc(info.username)}</div>
-      <div class="rfid-detail">🔢 <span>Account:</span> ${esc(info.account)}</div>`;
+      <div class="rfid-detail">🔢 <span>Account:</span> ${esc(info.account)}</div>
+      ${etRec?`<div class="rfid-detail" style="margin-top:6px;font-size:.68rem;color:var(--muted)">Last: ${esc(etRec.type)} ₱${parseFloat(etRec.amount).toLocaleString()} on ${esc(etRec.date)}</div>`:''}`;
     g.appendChild(card);
   });
 }
@@ -1244,14 +1311,19 @@ function renderAutosweep() {
   Object.entries(asData).forEach(([plate,info])=>{
     const bal=parseFloat(info.balance)||0; const cls=bal>=3000?'high':bal>=1000?'mid':'low';
     const card=document.createElement('div'); card.className='rfid-card';
+    const asRec=(asPass[plate]||[]).slice(-1)[0];
     card.innerHTML=`
-      <button class="rfid-edit-btn" onclick="openRfidModal('autosweep','${esc(plate)}')">✏️ Edit</button>
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:6px">
+        <button class="rfid-edit-btn" onclick="openPassModal('autosweep','${esc(plate)}')">📋 Pass Records</button>
+        <button class="rfid-edit-btn" onclick="openRfidModal('autosweep','${esc(plate)}')">✏️ Edit</button>
+      </div>
       <div class="rfid-plate">${esc(plate)}</div>
       <div class="rfid-date">${esc(info.date)}</div>
       <div class="rfid-bal ${cls}">₱${bal.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <div class="rfid-bal-lbl">Autosweep Balance</div>
       <div class="rfid-detail">💳 <span>Card:</span> ${esc(info.card)}</div>
-      <div class="rfid-detail">📧 <span>Email:</span> ${esc(info.email)}</div>`;
+      <div class="rfid-detail">📧 <span>Email:</span> ${esc(info.email)}</div>
+      ${asRec?`<div class="rfid-detail" style="margin-top:6px;font-size:.68rem;color:var(--muted)">Last: ${esc(asRec.type)} ₱${parseFloat(asRec.amount).toLocaleString()} on ${esc(asRec.date)}</div>`:''}`;
     g.appendChild(card);
   });
 }
@@ -1293,6 +1365,138 @@ function saveRfid() {
     asData[plate]={balance:bal,date,card:document.getElementById('rfidCard').value.trim(),account:document.getElementById('rfidAcct2').value.trim(),email:document.getElementById('rfidEmail').value.trim()};
     saveAll(); closeRfidModal(); renderAutosweep();
   }
+}
+
+
+// ═══════════════════ PASS RECORDS ═══════════════════
+let passModalType = null, passModalPlate = null;
+
+function openPassModal(type, plate) {
+  passModalType = type; passModalPlate = plate;
+  const data = type === 'easytrip' ? etPass : asPass;
+  const recs = (data[plate] || []).slice().reverse();
+  const label = type === 'easytrip' ? 'Easytrip' : 'Autosweep';
+  document.getElementById('passModalTitle').innerHTML = `📋 <em>${label}</em> — ${esc(plate)}`;
+  renderPassList(recs);
+  document.getElementById('passModalBg').classList.add('open');
+}
+function closePassModal() {
+  document.getElementById('passModalBg').classList.remove('open');
+  passModalType = null; passModalPlate = null;
+}
+function renderPassList(recs) {
+  const list = document.getElementById('passRecordList');
+  if (!recs.length) { list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:24px;font-size:.85rem">No records yet.</div>'; return; }
+  list.innerHTML = recs.map((r, i) => `
+    <div class="pass-rec-row">
+      <div class="pass-rec-meta">
+        <span class="pass-rec-type ${r.type === 'load' ? 'load' : 'use'}">${r.type === 'load' ? '⬆ Load' : '⬇ Use'}</span>
+        <span class="pass-rec-date">${esc(r.date)}</span>
+      </div>
+      <div class="pass-rec-amount ${r.type === 'load' ? 'load' : 'use'}">
+        ${r.type === 'load' ? '+' : '−'}₱${parseFloat(r.amount).toLocaleString('en-PH', {minimumFractionDigits:2})}
+      </div>
+      ${r.balance !== undefined ? `<div class="pass-rec-bal">Balance: ₱${parseFloat(r.balance).toLocaleString('en-PH',{minimumFractionDigits:2})}</div>` : ''}
+      ${r.note ? `<div class="pass-rec-note">${esc(r.note)}</div>` : ''}
+      <button class="pass-rec-del" onclick="deletePassRec(${recs.length - 1 - i})">🗑</button>
+    </div>`).join('');
+}
+function deletePassRec(idx) {
+  if (!confirm('Delete this record?')) return;
+  const data = passModalType === 'easytrip' ? etPass : asPass;
+  data[passModalPlate].splice(idx, 1);
+  saveAll();
+  openPassModal(passModalType, passModalPlate);
+}
+function savePassRecord() {
+  const type = document.getElementById('passRecType').value;
+  const amount = parseFloat(document.getElementById('passRecAmount').value);
+  const date = document.getElementById('passRecDate').value.trim();
+  const balance = document.getElementById('passRecBalance').value;
+  const note = document.getElementById('passRecNote').value.trim();
+  if (!amount || !date) { alert('Amount and date are required.'); return; }
+  const data = passModalType === 'easytrip' ? etPass : asPass;
+  if (!data[passModalPlate]) data[passModalPlate] = [];
+  data[passModalPlate].push({
+    type, amount, date,
+    balance: balance ? parseFloat(balance) : undefined,
+    note: note || undefined
+  });
+  saveAll();
+  openPassModal(passModalType, passModalPlate);
+  // Reset form
+  document.getElementById('passRecAmount').value = '';
+  document.getElementById('passRecBalance').value = '';
+  document.getElementById('passRecNote').value = '';
+}
+
+// ═══════════════════ NOTES ═══════════════════
+let noteEditId = null;
+
+function renderNotes() {
+  const grid = document.getElementById('notesGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const pinned = notesData.filter(n => n.pinned);
+  const rest = notesData.filter(n => !n.pinned);
+  [...pinned, ...rest].forEach(note => {
+    const div = document.createElement('div');
+    div.className = 'note-card';
+    div.style.setProperty('--note-color', note.color || '#fffef5');
+    div.innerHTML = `
+      <div class="note-card-header">
+        <div class="note-card-title">${esc(note.title || 'Untitled')}</div>
+        <div class="note-card-actions">
+          <button onclick="toggleNotePin('${note.id}')" title="${note.pinned?'Unpin':'Pin'}">${note.pinned?'📌':'📍'}</button>
+          <button onclick="openNoteModal('${note.id}')">✏️</button>
+          <button onclick="deleteNote('${note.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="note-card-body">${esc(note.body||'').replace(/\n/g,'<br>')}</div>
+      <div class="note-card-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}) : ''}</div>
+    `;
+    grid.appendChild(div);
+  });
+  if (!notesData.length) {
+    grid.innerHTML = '<div style="text-align:center;color:var(--muted);padding:48px;font-size:.85rem">No notes yet. Click ＋ New Note to start.</div>';
+  }
+}
+
+function openNoteModal(id) {
+  noteEditId = id;
+  const note = id ? notesData.find(n => n.id === id) : null;
+  document.getElementById('noteMHead').innerHTML = note ? 'Edit <em>Note</em>' : 'New <em>Note</em>';
+  document.getElementById('noteTitleInput').value = note ? note.title : '';
+  document.getElementById('noteBodyInput').value = note ? note.body : '';
+  document.getElementById('noteColorInput').value = note ? (note.color || '#fffef5') : '#fffef5';
+  document.getElementById('noteModalBg').classList.add('open');
+  setTimeout(() => document.getElementById('noteTitleInput').focus(), 60);
+}
+function closeNoteModal() {
+  document.getElementById('noteModalBg').classList.remove('open');
+  noteEditId = null;
+}
+function saveNote() {
+  const title = document.getElementById('noteTitleInput').value.trim();
+  const body = document.getElementById('noteBodyInput').value.trim();
+  const color = document.getElementById('noteColorInput').value;
+  if (!title && !body) { alert('Write something first.'); return; }
+  if (noteEditId) {
+    const n = notesData.find(n => n.id === noteEditId);
+    if (n) { n.title = title; n.body = body; n.color = color; }
+  } else {
+    notesData.unshift({ id: 'n' + Date.now(), title, body, color, pinned: false, createdAt: new Date().toISOString() });
+  }
+  saveAll(); closeNoteModal(); renderNotes();
+}
+function toggleNotePin(id) {
+  const n = notesData.find(n => n.id === id);
+  if (n) { n.pinned = !n.pinned; saveAll(); renderNotes(); }
+}
+function deleteNote(id) {
+  if (!confirm('Delete this note?')) return;
+  notesData = notesData.filter(n => n.id !== id);
+  saveAll(); renderNotes();
 }
 
 // ═══════════════════ MONITORING ═══════════════════
@@ -1610,14 +1814,20 @@ window._fbInit = function(docRef) {
       if(d.xlEvs && Object.keys(d.xlEvs).length) xlEvs = d.xlEvs;
       if(d.xlDone) xlDone = d.xlDone;
       if(d.drvData && d.drvData.length) drvData = d.drvData;
-      if(d.etData && d.etData.length) etData = d.etData;
-      if(d.asData && d.asData.length) asData = d.asData;
+      if(d.etData) etData = d.etData;
+      if(d.asData) asData = d.asData;
+      if(d.etPass) etPass = d.etPass;
+      if(d.asPass) asPass = d.asPass;
+      if(d.notesData) notesData = d.notesData;
       saveData('sharon_v4', userEvs);
       saveData('sharon_xl_evs', xlEvs);
       saveData('sharon_xl_done', xlDone);
       saveData('sharon_drv', drvData);
       saveData('sharon_et', etData);
       saveData('sharon_as', asData);
+      saveData('sharon_etpass', etPass);
+      saveData('sharon_aspass', asPass);
+      saveData('sharon_notes', notesData);
     }
     renderCalendar(); renderSummary();
   }).catch(e=>{
@@ -1714,5 +1924,81 @@ if (window._pendingFbRef) { window._fbInit(window._pendingFbRef); }
   <option value="Isuzu Pick Up">
   <option value="Isuzu Pick Up pero nagpalit sila ni Kuya Jake">
 </datalist>
+
+<!-- PASS RECORDS MODAL -->
+<div class="modal-bg" id="passModalBg" onclick="if(event.target===this)closePassModal()">
+  <div class="modal" style="max-width:480px;max-height:80vh;display:flex;flex-direction:column">
+    <h2 id="passModalTitle">Pass Records</h2>
+    <!-- Add record form -->
+    <div style="background:#fdf6ee;border-radius:10px;padding:14px;margin-bottom:12px;flex-shrink:0">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div class="frow" style="margin:0">
+          <label>Type</label>
+          <select id="passRecType" style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.85rem;background:#fff">
+            <option value="load">⬆ Load</option>
+            <option value="use">⬇ Use / Spent</option>
+          </select>
+        </div>
+        <div class="frow" style="margin:0">
+          <label>Date *</label>
+          <input type="text" id="passRecDate" placeholder="e.g. Mar 7, 2026" style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.85rem;width:100%;box-sizing:border-box"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div class="frow" style="margin:0">
+          <label>Amount * (₱)</label>
+          <input type="number" id="passRecAmount" placeholder="0.00" min="0" step="0.01" style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.85rem;width:100%;box-sizing:border-box"/>
+        </div>
+        <div class="frow" style="margin:0">
+          <label>New Balance (₱)</label>
+          <input type="number" id="passRecBalance" placeholder="optional" min="0" step="0.01" style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.85rem;width:100%;box-sizing:border-box"/>
+        </div>
+      </div>
+      <div class="frow" style="margin:0 0 8px">
+        <label>Note</label>
+        <input type="text" id="passRecNote" placeholder="optional" style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:.85rem;width:100%;box-sizing:border-box"/>
+      </div>
+      <button class="save-btn" onclick="savePassRecord()" style="width:100%">＋ Add Record</button>
+    </div>
+    <!-- Record list -->
+    <div id="passRecordList" style="overflow-y:auto;flex:1;padding-right:4px"></div>
+    <div style="text-align:right;margin-top:10px;flex-shrink:0">
+      <button class="cancel-btn" onclick="closePassModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- NOTE MODAL -->
+<div class="modal-bg" id="noteModalBg" onclick="if(event.target===this)closeNoteModal()">
+  <div class="modal" style="max-width:520px">
+    <h2 id="noteMHead">New <em>Note</em></h2>
+    <div class="frow">
+      <label>Title</label>
+      <input type="text" id="noteTitleInput" placeholder="Note title…" style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.9rem;width:100%;box-sizing:border-box"/>
+    </div>
+    <div class="frow">
+      <label>Content</label>
+      <textarea id="noteBodyInput" placeholder="Write your note here…" style="border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.88rem;width:100%;box-sizing:border-box;min-height:160px;line-height:1.8;font-family:inherit;resize:vertical"></textarea>
+    </div>
+    <div class="frow" style="flex-direction:row;align-items:center;gap:12px">
+      <label style="margin:0">Paper color:</label>
+      <input type="color" id="noteColorInput" value="#fffef5" style="width:40px;height:32px;border:none;border-radius:6px;cursor:pointer;background:none"/>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="document.getElementById('noteColorInput').value='#fffef5'" style="width:22px;height:22px;border-radius:50%;background:#fffef5;border:1px solid #ccc;cursor:pointer"></button>
+        <button onclick="document.getElementById('noteColorInput').value='#fef9e7'" style="width:22px;height:22px;border-radius:50%;background:#fef9e7;border:1px solid #ccc;cursor:pointer"></button>
+        <button onclick="document.getElementById('noteColorInput').value='#fce4ec'" style="width:22px;height:22px;border-radius:50%;background:#fce4ec;border:1px solid #ccc;cursor:pointer"></button>
+        <button onclick="document.getElementById('noteColorInput').value='#e8f5e9'" style="width:22px;height:22px;border-radius:50%;background:#e8f5e9;border:1px solid #ccc;cursor:pointer"></button>
+        <button onclick="document.getElementById('noteColorInput').value='#e3f2fd'" style="width:22px;height:22px;border-radius:50%;background:#e3f2fd;border:1px solid #ccc;cursor:pointer"></button>
+        <button onclick="document.getElementById('noteColorInput').value='#f3e5f5'" style="width:22px;height:22px;border-radius:50%;background:#f3e5f5;border:1px solid #ccc;cursor:pointer"></button>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="cancel-btn" onclick="closeNoteModal()">Cancel</button>
+      <button class="save-btn" onclick="saveNote()">Save Note</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
