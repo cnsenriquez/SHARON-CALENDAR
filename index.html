@@ -581,6 +581,8 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 <script>
 // ═══════════════════ CONSTANTS & STATE ═══════════════════
 const COLORS = ['#e8927c','#d4a96a','#89b5a0','#c4a8d4','#7bb8d8'];
+const DRIVER_NAMES = ["Agustin", "Anthony", "Benjie", "Jake", "Rey"];
+const DRIVER_CARS = ["Amapola", "Commute", "Day Off", "Day Off na", "Ford", "Ford \u2013 di tuloy", "Grandia", "Grandia & Isuzu Pick Up", "Grandia & L3", "Hilux", "Hilux Shuttle", "Isuzu  Pick Up / Ford", "Isuzu Pick", "Isuzu Pick Up", "Isuzu Pick Up pero nagpalit sila ni Kuya Jake"];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS_F = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const DAYS_S = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -611,13 +613,14 @@ let DOC_REF = null;
 let _saveTimer = null;
 
 function saveToFirestore() {
-  if (!DOC_REF) return;
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(()=>{
-    DOC_REF.set({
-      userEvs, xlEvs, xlDone, drvData, etData, asData,
-      updatedAt: new Date().toISOString()
-    }).catch(e=>console.warn('Firestore save failed:', e));
+    const payload = { userEvs, xlEvs, xlDone, drvData, etData, asData, updatedAt: new Date().toISOString() };
+    if (DOC_REF) {
+      DOC_REF.set(payload).catch(e=>console.warn('Firestore save failed:', e));
+    } else if (window._saveToFirestoreModular) {
+      window._saveToFirestoreModular(payload);
+    }
   }, 800);
 }
 
@@ -1155,8 +1158,12 @@ function addDrvPerson(driver='', car='', errand=''){
       <span>Person ${num}</span>
       <button class="drv-rm-btn" onclick="removeDrvPerson('${id}')" title="Remove">✕</button>
     </div>
-    <div class="frow"><label>Driver Name *</label><input type="text" class="dp-name" placeholder="e.g. Benjie" value="${esc(driver)}"/></div>
-    <div class="frow"><label>Car / Vehicle</label><input type="text" class="dp-car" placeholder="e.g. Grandia" value="${esc(car)}"/></div>
+    <div class="frow"><label>Driver Name *</label>
+      <input type="text" class="dp-name" list="driverNameList" placeholder="Select or type name…" value="${esc(driver)}" autocomplete="off"/>
+    </div>
+    <div class="frow"><label>Car / Vehicle</label>
+      <input type="text" class="dp-car" list="driverCarList" placeholder="Select or type car…" value="${esc(car)}" autocomplete="off"/>
+    </div>
     <div class="frow drv-person-errand"><label>Errand / Schedule</label><textarea class="dp-errand" placeholder="Details of assignment…" style="min-height:64px">${esc(errand)}</textarea></div>`;
   list.appendChild(div);
   if(driver==='') setTimeout(()=>div.querySelector('.dp-name').focus(),60);
@@ -1595,6 +1602,7 @@ const _fbTimeout = setTimeout(()=>{
 window._fbInit = function(docRef) {
   clearTimeout(_fbTimeout);
   DOC_REF = docRef;
+  console.log('✓ Firebase connected and loading data…');
   DOC_REF.get().then(doc=>{
     if(doc.exists){
       const d = doc.data();
@@ -1617,6 +1625,8 @@ window._fbInit = function(docRef) {
     renderCalendar(); renderSummary();
   });
 };
+// Handle case where Firebase module loaded before this script finished
+if (window._pendingFbRef) { window._fbInit(window._pendingFbRef); }
 </script>
 
 <!-- PDF MONTH PICKER MODAL -->
@@ -1663,16 +1673,46 @@ window._fbInit = function(docRef) {
   };
 
   // Signal main script that Firebase is ready
-  if (window._fbInit) {
-    // Wrap docRef in compat-like interface for main script
-    window._fbInit({
-      get: () => getDoc(docRef).then(snap => ({
-        exists: snap.exists(),
-        data: () => snap.data()
-      })),
-      set: (data) => setDoc(docRef, data)
-    });
+  // Use requestAnimationFrame to ensure main script has fully initialized
+  const fbRef = {
+    get: () => getDoc(docRef).then(snap => ({ exists: snap.exists(), data: () => snap.data() })),
+    set: (data) => setDoc(docRef, data)
+  };
+  // Also expose for direct saves
+  window._saveToFirestoreModular = async (data) => {
+    try { await setDoc(docRef, data); } catch(e) { console.warn('Firestore save error:', e); }
+  };
+  if (typeof window._fbInit === 'function') {
+    window._fbInit(fbRef);
+  } else {
+    // Main script not ready yet — wait for it
+    window._pendingFbRef = fbRef;
   }
 </script>
+
+<datalist id="driverNameList">
+  <option value="Agustin">
+  <option value="Anthony">
+  <option value="Benjie">
+  <option value="Jake">
+  <option value="Rey">
+</datalist>
+<datalist id="driverCarList">
+  <option value="Amapola">
+  <option value="Commute">
+  <option value="Day Off">
+  <option value="Day Off na">
+  <option value="Ford">
+  <option value="Ford – di tuloy">
+  <option value="Grandia">
+  <option value="Grandia & Isuzu Pick Up">
+  <option value="Grandia & L3">
+  <option value="Hilux">
+  <option value="Hilux Shuttle">
+  <option value="Isuzu  Pick Up / Ford">
+  <option value="Isuzu Pick">
+  <option value="Isuzu Pick Up">
+  <option value="Isuzu Pick Up pero nagpalit sila ni Kuya Jake">
+</datalist>
 </body>
 </html>
