@@ -578,8 +578,6 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
 // ═══════════════════ CONSTANTS & STATE ═══════════════════
 const COLORS = ['#e8927c','#d4a96a','#89b5a0','#c4a8d4','#7bb8d8'];
@@ -596,20 +594,7 @@ let drvEditIdx = null; // index in drvData array (after sort)
 let rfidType = null, rfidEditPlate = null;
 
 // ─── PERSISTENT DATA ───
-// ── Firebase config ──
-const firebaseConfig = {
-  apiKey: "AIzaSyAygaQEDQIT6J9gQb1RWX4fd0NgE0CaWLk",
-  authDomain: "sharon-calendar.firebaseapp.com",
-  projectId: "sharon-calendar",
-  storageBucket: "sharon-calendar.firebasestorage.app",
-  messagingSenderId: "547746715437",
-  appId: "1:547746715437:web:3f3906733de8592522a5a4"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const DOC_REF = db.collection('sharon').doc('data');
-
-// ── localStorage fallback helpers (used during load before Firestore responds) ──
+// ── localStorage helpers ──
 function loadData(key, fallback) {
   try {
     const v = localStorage.getItem(key);
@@ -621,9 +606,12 @@ function loadData(key, fallback) {
 }
 function saveData(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
 
-// ── Firestore save (debounced) ──
+// ── Firestore bridge (set by module script below) ──
+let DOC_REF = null;
 let _saveTimer = null;
+
 function saveToFirestore() {
+  if (!DOC_REF) return;
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(()=>{
     DOC_REF.set({
@@ -1577,14 +1565,14 @@ function doPdfPrint(){
       body { padding:14pt 18pt; }
       .pe-day { break-inside:avoid; }
     }
-  </style>
-  </head><body>
+  <\/style>
+  <\/head><body>
   <div class="pe-header">
     <h1>${MFULL_PDF[mo-1]} ${y}</h1>
     <div class="pe-gen">Generated ${dateStr}</div>
   </div>
   ${rows}
-  </body></html>`;
+  <\/body><\/html>`;
 
   const win = window.open('','_blank','width=800,height=900');
   win.document.write(printHTML);
@@ -1595,35 +1583,40 @@ function doPdfPrint(){
 
 // ═══════════════════ INIT ═══════════════════
 buildSwatches();
-
-// Show loading indicator
 document.getElementById('calGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:.85rem">🌸 Loading your schedule…</div>';
-
-// Load from Firestore, fall back to localStorage if offline
-DOC_REF.get().then(doc=>{
-  if(doc.exists){
-    const d = doc.data();
-    if(d.userEvs) userEvs = d.userEvs;
-    if(d.xlEvs && Object.keys(d.xlEvs).length) xlEvs = d.xlEvs;
-    if(d.xlDone) xlDone = d.xlDone;
-    if(d.drvData && d.drvData.length) drvData = d.drvData;
-    if(d.etData && d.etData.length) etData = d.etData;
-    if(d.asData && d.asData.length) asData = d.asData;
-    // Mirror to localStorage
-    saveData('sharon_v4', userEvs);
-    saveData('sharon_xl_evs', xlEvs);
-    saveData('sharon_xl_done', xlDone);
-    saveData('sharon_drv', drvData);
-    saveData('sharon_et', etData);
-    saveData('sharon_as', asData);
-  }
-}).catch(e=>{
-  console.warn('Firestore load failed, using localStorage:', e);
-}).finally(()=>{
-  renderCalendar(); renderSummary();
-});
-
 document.getElementById('evTitle').addEventListener('keydown',e=>{if(e.key==='Enter')saveSchedule();});
+
+// Firebase module will call window._fbInit(docRef) when ready
+// If it doesn't call within 4s, fall back to localStorage
+const _fbTimeout = setTimeout(()=>{
+  if(!DOC_REF){ console.warn('Firebase timeout — using localStorage'); renderCalendar(); renderSummary(); }
+}, 4000);
+
+window._fbInit = function(docRef) {
+  clearTimeout(_fbTimeout);
+  DOC_REF = docRef;
+  DOC_REF.get().then(doc=>{
+    if(doc.exists){
+      const d = doc.data();
+      if(d.userEvs) userEvs = d.userEvs;
+      if(d.xlEvs && Object.keys(d.xlEvs).length) xlEvs = d.xlEvs;
+      if(d.xlDone) xlDone = d.xlDone;
+      if(d.drvData && d.drvData.length) drvData = d.drvData;
+      if(d.etData && d.etData.length) etData = d.etData;
+      if(d.asData && d.asData.length) asData = d.asData;
+      saveData('sharon_v4', userEvs);
+      saveData('sharon_xl_evs', xlEvs);
+      saveData('sharon_xl_done', xlDone);
+      saveData('sharon_drv', drvData);
+      saveData('sharon_et', etData);
+      saveData('sharon_as', asData);
+    }
+    renderCalendar(); renderSummary();
+  }).catch(e=>{
+    console.warn('Firestore load failed, using localStorage:', e);
+    renderCalendar(); renderSummary();
+  });
+};
 </script>
 
 <!-- PDF MONTH PICKER MODAL -->
@@ -1642,5 +1635,44 @@ document.getElementById('evTitle').addEventListener('keydown',e=>{if(e.key==='En
 <!-- PRINT AREA -->
 <div id="printArea"></div>
 
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAygaQEDQIT6J9gQb1RWX4fd0NgE0CaWLk",
+    authDomain: "sharon-calendar.firebaseapp.com",
+    projectId: "sharon-calendar",
+    storageBucket: "sharon-calendar.firebasestorage.app",
+    messagingSenderId: "547746715437",
+    appId: "1:547746715437:web:3f3906733de8592522a5a4"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const docRef = doc(db, 'sharon', 'data');
+
+  // Override saveToFirestore to use modular API
+  window._saveToFirestoreModular = async (data) => {
+    try {
+      await setDoc(docRef, { ...data, updatedAt: new Date().toISOString() });
+    } catch(e) {
+      console.warn('Firestore save error:', e);
+    }
+  };
+
+  // Signal main script that Firebase is ready
+  if (window._fbInit) {
+    // Wrap docRef in compat-like interface for main script
+    window._fbInit({
+      get: () => getDoc(docRef).then(snap => ({
+        exists: snap.exists(),
+        data: () => snap.data()
+      })),
+      set: (data) => setDoc(docRef, data)
+    });
+  }
+</script>
 </body>
 </html>
