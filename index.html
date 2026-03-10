@@ -461,6 +461,30 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 .sh-add-date-btn:hover { background: var(--rose-deep); color: #fff; border-color: var(--rose-deep); }
 .rfid-sheet-legend { display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; font-size: .72rem; color: var(--muted); }
 .rfid-sheet-legend span { display: flex; align-items: center; gap: 4px; }
+
+/* ── Day Planner Modal ── */
+.day-plan-bg { display:none; position:fixed; inset:0; background:rgba(40,60,50,.35); backdrop-filter:blur(4px); z-index:200; align-items:center; justify-content:center; padding:14px; }
+.day-plan-bg.open { display:flex; }
+.day-plan-modal { background:#f4f8f5; border-radius:20px; width:100%; max-width:420px; max-height:88vh; overflow-y:auto; box-shadow:0 24px 64px rgba(40,80,60,.18); border:1px solid #c8ddd0; animation:popIn .22s cubic-bezier(.34,1.56,.64,1) both; }
+.day-plan-head { padding:20px 22px 14px; border-bottom:1px solid #d8e8df; position:sticky; top:0; background:#f4f8f5; z-index:2; }
+.day-plan-title { font-family:'Playfair Display',serif; font-size:1.4rem; font-weight:700; color:#3d5c4a; letter-spacing:.01em; text-transform:uppercase; }
+.day-plan-date { font-size:.78rem; color:#7a9088; margin-top:2px; }
+.day-plan-close { position:absolute; top:14px; right:16px; background:none; border:none; font-size:1.1rem; color:#8aaa94; cursor:pointer; padding:4px 8px; border-radius:8px; }
+.day-plan-close:hover { background:#e0eeea; color:#3d5c4a; }
+.day-plan-body { padding:16px 22px 22px; }
+.day-plan-section { margin-bottom:18px; }
+.day-plan-section-lbl { font-size:.62rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#8aaa94; margin-bottom:8px; }
+.day-plan-item { display:flex; gap:12px; align-items:flex-start; padding:7px 0; border-bottom:1px dashed #d8e8df; }
+.day-plan-item:last-child { border-bottom:none; }
+.day-plan-time { font-size:.75rem; font-weight:700; color:#5a8070; white-space:nowrap; min-width:72px; margin-top:1px; }
+.day-plan-text { font-size:.82rem; color:#2c3830; line-height:1.45; flex:1; }
+.day-plan-text.done { text-decoration:line-through; color:#9aaa9a; }
+.day-plan-xl { background:#eef5f0; border-radius:10px; padding:10px 14px; margin-bottom:10px; }
+.day-plan-xl-title { font-size:.85rem; font-weight:700; color:#3d5c4a; }
+.day-plan-xl-notes { font-size:.76rem; color:#5a7868; margin-top:4px; line-height:1.5; white-space:pre-wrap; }
+.day-plan-add-btn { width:100%; margin-top:12px; background:var(--rose-deep); color:#fff; border:none; border-radius:12px; padding:10px; font-family:'Nunito',sans-serif; font-size:.85rem; font-weight:700; cursor:pointer; transition:opacity .15s; }
+.day-plan-add-btn:hover { opacity:.85; }
+.day-plan-empty { text-align:center; padding:28px 0; color:#9aaa9a; font-style:italic; font-size:.85rem; }
 </style>
 </head>
 <body>
@@ -800,6 +824,89 @@ function switchTab(name, btn) {
 }
 
 // ═══════════════════ CALENDAR ═══════════════════
+
+function openDayPlan(key) {
+  const [y,m,d] = key.split('-').map(Number);
+  const dateObj = new Date(y, m-1, d);
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dateLabel = dayNames[dateObj.getDay()] + ', ' + monthNames[m-1] + ' ' + d + ', ' + y;
+
+  document.getElementById('dayPlanDate').textContent = dateLabel;
+
+  const body = document.getElementById('dayPlanBody');
+  body.innerHTML = '';
+
+  const xlEv = xlEvs[key];
+  const uEvs = userEvs[key] || [];
+
+  if(!xlEv && !uEvs.length) {
+    body.innerHTML = '<div class="day-plan-empty">No events for this day.<br><span style="font-size:.75rem">Click the button below to add one.</span></div>';
+  }
+
+  // XL (pinned) event
+  if(xlEv) {
+    const xd = !!xlDone[key];
+    const title = xlTitle(key);
+    const fullText = xlEv;
+    const notes = fullText.slice(title.length).replace(/^\s+/,'').trim();
+    const sec = document.createElement('div');
+    sec.className = 'day-plan-xl' + (xd ? ' chip-done' : '');
+    sec.innerHTML = `
+      <div class="day-plan-xl-title" style="${xd?'text-decoration:line-through;color:#9aaa9a':''}">
+        ${xd?'✓ ':'📌 '}${esc(title)}${xd?' – DONE':''}
+      </div>
+      ${notes ? `<div class="day-plan-xl-notes">${esc(notes)}</div>` : ''}
+      <button onclick="toggleXlDone('${key}')" style="margin-top:8px;background:none;border:1px solid #8aaa94;border-radius:8px;padding:3px 10px;font-size:.7rem;color:#5a7868;cursor:pointer;font-family:'Nunito',sans-serif">
+        ${xd ? 'Mark Undone' : '✓ Mark Done'}
+      </button>`;
+    body.appendChild(sec);
+  }
+
+  // User events — grouped, show all
+  if(uEvs.length) {
+    const sec = document.createElement('div');
+    sec.className = 'day-plan-section';
+    if(xlEv) { const lbl=document.createElement('div'); lbl.className='day-plan-section-lbl'; lbl.textContent='Schedule'; sec.appendChild(lbl); }
+
+    uEvs.forEach((ev, idx) => {
+      const item = document.createElement('div');
+      item.className = 'day-plan-item';
+      item.innerHTML = `
+        <div class="day-plan-time">${ev.time ? fmt12(ev.time) : '—'}</div>
+        <div class="day-plan-text${ev.done?' done':''}">
+          ${esc(ev.title)}
+          ${ev.notes ? `<div style="font-size:.74rem;color:#7a9088;margin-top:2px;white-space:pre-wrap">${esc(ev.notes)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:4px;margin-left:4px">
+          <button onclick="openDetail('${key}',${idx});closeDayPlan()" style="background:none;border:none;color:#8aaa94;cursor:pointer;font-size:.8rem;padding:2px 5px" title="Edit">✏️</button>
+        </div>`;
+      sec.appendChild(item);
+    });
+    body.appendChild(sec);
+  }
+
+  // Add event button
+  const addBtn = document.createElement('button');
+  addBtn.className = 'day-plan-add-btn';
+  addBtn.textContent = '＋ Add Event';
+  addBtn.onclick = () => { closeDayPlan(); openAddModal(key); };
+  body.appendChild(addBtn);
+
+  document.getElementById('dayPlanBg').classList.add('open');
+}
+
+function closeDayPlan() {
+  document.getElementById('dayPlanBg').classList.remove('open');
+}
+
+function toggleXlDone(key) {
+  xlDone[key] = !xlDone[key];
+  saveAll(); renderCalendar();
+  // Re-open to refresh
+  openDayPlan(key);
+}
+
 function renderCalendar() {
   document.getElementById('monthLbl').textContent = `${MONTHS[vMonth]} ${vYear}`;
   document.getElementById('msSectionTitle').textContent = `🌸 ${MONTHS[vMonth]} ${vYear} — Full Summary`;
@@ -850,7 +957,7 @@ function renderCalendar() {
         cell.appendChild(nd);
       }
     });
-    cell.addEventListener('click',()=>scrollToMsDay(key));
+    cell.addEventListener('click',()=>openDayPlan(key));
     grid.appendChild(cell);
   });
 
@@ -2449,6 +2556,18 @@ if (window._pendingInit) { window._fbInit(window._pendingInit.load, window._pend
       <button class="cancel-btn" onclick="document.getElementById('addColModalBg').classList.remove('open')">Cancel</button>
       <button class="save-btn" onclick="confirmAddDateColumn()">Add Column ✦</button>
     </div>
+  </div>
+</div>
+
+<!-- DAY PLANNER MODAL -->
+<div class="day-plan-bg" id="dayPlanBg" onclick="if(event.target===this)closeDayPlan()">
+  <div class="day-plan-modal" onclick="event.stopPropagation()">
+    <div class="day-plan-head">
+      <div class="day-plan-title">Daily Routine</div>
+      <div class="day-plan-date" id="dayPlanDate"></div>
+      <button class="day-plan-close" onclick="closeDayPlan()">✕</button>
+    </div>
+    <div class="day-plan-body" id="dayPlanBody"></div>
   </div>
 </div>
 </body>
