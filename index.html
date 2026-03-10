@@ -754,6 +754,7 @@ let drvData = loadData('sharon_drv', DRV_BASE);
 const ET_BASE = {};
 const AS_BASE = {};
 let etData = loadData('sharon_et', ET_BASE);
+window._rfidExtraDates = loadData('sharon_rfid_dates', []);
 let asData = loadData('sharon_as', AS_BASE);
 let etPass = loadData('sharon_etpass', {});   // {plate: [{date,amount,type,balance,note}]}
 let asPass = loadData('sharon_aspass', {});
@@ -765,6 +766,7 @@ function saveAll() {
   saveData('sharon_xl_done', xlDone);
   saveData('sharon_drv', drvData);
   saveData('sharon_et', etData);
+  saveData('sharon_rfid_dates', window._rfidExtraDates||[]);
   saveData('sharon_as', asData);
   saveData('sharon_etpass', etPass);
   saveData('sharon_aspass', asPass);
@@ -1420,29 +1422,11 @@ function confirmAddDateColumn() {
   if(!raw) return;
   const dateStr = new Date(raw + 'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
   document.getElementById('addColModalBg').classList.remove('open');
-  // Add dateStr to all plates with carry-forward balance
-  Object.keys(etData).forEach(plate => {
-    const map = getBalMap(etData, etPass, plate);
-    if(!map[dateStr]) {
-      const latest = Object.values(map).slice(-1)[0];
-      if(latest !== undefined) {
-        if(!etPass[plate]) etPass[plate]=[];
-        etPass[plate].push({type:'carry',amount:latest,date:dateStr,balance:latest,note:'Carried forward'});
-        etData[plate].balance = latest; etData[plate].date = dateStr;
-      }
-    }
-  });
-  Object.keys(asData).forEach(plate => {
-    const map = getBalMap(asData, asPass, plate);
-    if(!map[dateStr]) {
-      const latest = Object.values(map).slice(-1)[0];
-      if(latest !== undefined) {
-        if(!asPass[plate]) asPass[plate]=[];
-        asPass[plate].push({type:'carry',amount:latest,date:dateStr,balance:latest,note:'Carried forward'});
-        asData[plate].balance = latest; asData[plate].date = dateStr;
-      }
-    }
-  });
+
+  // Store the new date in a dedicated list so it shows as a column even if no balances yet
+  if(!window._rfidExtraDates) window._rfidExtraDates = [];
+  if(!window._rfidExtraDates.includes(dateStr)) window._rfidExtraDates.push(dateStr);
+
   saveAll(); renderRfidSpreadsheet();
 }
 
@@ -1476,12 +1460,14 @@ function renderRfidSpreadsheet() {
   const allDates = new Set();
   etPlates.forEach(p => {
     if(etData[p]?.date) allDates.add(etData[p].date);
-    (etPass[p]||[]).forEach(r => { if(r.date && r.type!=='carry') allDates.add(r.date); });
+    (etPass[p]||[]).forEach(r => { if(r.date) allDates.add(r.date); });
   });
   asPlates.forEach(p => {
     if(asData[p]?.date) allDates.add(asData[p].date);
-    (asPass[p]||[]).forEach(r => { if(r.date && r.type!=='carry') allDates.add(r.date); });
+    (asPass[p]||[]).forEach(r => { if(r.date) allDates.add(r.date); });
   });
+  // Include manually added date columns (even if no balances yet)
+  if(window._rfidExtraDates) window._rfidExtraDates.forEach(d => allDates.add(d));
 
   const sortedDates = [...allDates].sort((a,b)=>{
     const pa=new Date(a), pb=new Date(b);
@@ -2191,6 +2177,7 @@ window._fbInit = function(loadFn, saveFn) {
       if(d.etPass) etPass = d.etPass;
       if(d.asPass) asPass = d.asPass;
       if(d.notesData) notesData = d.notesData;
+      if(d.rfidExtraDates) window._rfidExtraDates = d.rfidExtraDates;
       saveData('sharon_v4', userEvs);
       saveData('sharon_xl_evs', xlEvs);
       saveData('sharon_xl_done', xlDone);
