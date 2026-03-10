@@ -735,7 +735,7 @@ function saveToFirestore() {
   _saveTimer = setTimeout(()=>{
     if (!window._fsReady || !window._fsSave) return;
     window._fsSave({ userEvs, xlEvs, xlDone, drvData, etData, asData, etPass, asPass, notesData, updatedAt: new Date().toISOString() });
-  }, 800);
+  }, 300);
 }
 
 // User schedule events: {dateKey: [{title,time,notes,color,done}]}
@@ -1387,27 +1387,35 @@ function clearAllRfidData() {
 }
 
 function deleteRfidDateColumn(dateStr) {
-  if(!confirm(`Delete column "${dateStr}"? This removes all balance records for this date.`)) return;
-  // Remove from all pass records
-  Object.keys(etPass).forEach(p => {
-    etPass[p] = (etPass[p]||[]).filter(r => r.date !== dateStr);
-  });
-  Object.keys(asPass).forEach(p => {
-    asPass[p] = (asPass[p]||[]).filter(r => r.date !== dateStr);
-  });
-  // If base date matches, update to next available
-  Object.keys(etData).forEach(p => {
-    if(etData[p].date === dateStr) {
-      const recs = (etPass[p]||[]).filter(r=>r.balance!==undefined);
-      if(recs.length) { etData[p].date=recs.slice(-1)[0].date; etData[p].balance=recs.slice(-1)[0].balance; }
+  if(!confirm(`Delete column "${dateStr}"?`)) return;
+  // Remove data
+  Object.keys(etPass).forEach(p => { etPass[p]=(etPass[p]||[]).filter(r=>r.date!==dateStr); });
+  Object.keys(asPass).forEach(p => { asPass[p]=(asPass[p]||[]).filter(r=>r.date!==dateStr); });
+  Object.keys(etData).forEach(p => { if(etData[p].date===dateStr){const r=(etPass[p]||[]).filter(r=>r.balance!==undefined).slice(-1)[0];if(r){etData[p].date=r.date;etData[p].balance=r.balance;}}});
+  Object.keys(asData).forEach(p => { if(asData[p].date===dateStr){const r=(asPass[p]||[]).filter(r=>r.balance!==undefined).slice(-1)[0];if(r){asData[p].date=r.date;asData[p].balance=r.balance;}}});
+  if(window._rfidExtraDates) window._rfidExtraDates=window._rfidExtraDates.filter(d=>d!==dateStr);
+
+  // Instant DOM removal — find column index by header text
+  const tbl = document.querySelector('#rfidSpreadsheet .rfid-sheet');
+  if(!tbl) { saveAll(); renderRfidSpreadsheet(); return; }
+  const thead = tbl.querySelector('thead');
+  const tbody = tbl.querySelector('tbody');
+  // Find col index in row1 (each date = colspan 2)
+  let colStart = 1; // after plate col
+  let found = false;
+  thead.querySelectorAll('tr')[0].querySelectorAll('th').forEach(th => {
+    if(th.classList.contains('sh-plate-hdr')) return;
+    if(th.classList.contains('sh-add-col')) return;
+    if(th.textContent.trim().startsWith(dateStr)) {
+      // Remove this th and the two sub-headers at colStart and colStart+1
+      th.remove();
+      const subHdrs = [...thead.querySelectorAll('tr')[1].querySelectorAll('th')];
+      // remove by position: colStart-1 and colStart (0-indexed among sub-headers)
+      // easier: just re-render
+      found = true;
     }
   });
-  Object.keys(asData).forEach(p => {
-    if(asData[p].date === dateStr) {
-      const recs = (asPass[p]||[]).filter(r=>r.balance!==undefined);
-      if(recs.length) { asData[p].date=recs.slice(-1)[0].date; asData[p].balance=recs.slice(-1)[0].balance; }
-    }
-  });
+  // Just re-render for simplicity (delete is less frequent, ok to be slightly slower)
   saveAll(); renderRfidSpreadsheet();
 }
 
@@ -1423,11 +1431,76 @@ function confirmAddDateColumn() {
   const dateStr = new Date(raw + 'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
   document.getElementById('addColModalBg').classList.remove('open');
 
-  // Store the new date in a dedicated list so it shows as a column even if no balances yet
   if(!window._rfidExtraDates) window._rfidExtraDates = [];
-  if(!window._rfidExtraDates.includes(dateStr)) window._rfidExtraDates.push(dateStr);
+  if(window._rfidExtraDates.includes(dateStr)) return; // already exists
+  window._rfidExtraDates.push(dateStr);
 
-  saveAll(); renderRfidSpreadsheet();
+  // Instant DOM update — add column without full re-render
+  rfidAddColumnToDOM(dateStr);
+  // Save in background
+  saveData('sharon_rfid_dates', window._rfidExtraDates);
+  saveToFirestore();
+}
+
+function rfidAddColumnToDOM(dateStr) {
+  const tbl = document.querySelector('#rfidSpreadsheet .rfid-sheet');
+  if(!tbl) { renderRfidSpreadsheet(); return; }
+  const thead = tbl.querySelector('thead');
+  const tbody = tbl.querySelector('tbody');
+  const rows1 = thead.querySelectorAll('tr');
+
+  // Add to header row 1: date th (before last th = + Date button)
+  const lastTh0 = rows1[0].lastElementChild;
+  const dateTh = document.createElement('th');
+  dateTh.className = 'sh-date-hdr sh-date-group';
+  dateTh.colSpan = 2;
+  dateTh.style.position = 'relative';
+  dateTh.innerHTML = `${esc(dateStr)}<button onclick="deleteRfidDateColumn('${esc(dateStr)}')" title="Delete column"
+    style="position:absolute;top:3px;right:4px;background:rgba(255,255,255,.15);border:none;color:rgba(255,255,255,.7);cursor:pointer;border-radius:4px;font-size:.6rem;padding:1px 5px;line-height:1.4;font-family:'Nunito',sans-serif"
+    onmouseover="this.style.background='rgba(180,60,60,.7)';this.style.color='#fff'"
+    onmouseout="this.style.background='rgba(255,255,255,.15)';this.style.color='rgba(255,255,255,.7)'">✕</button>`;
+  rows1[0].insertBefore(dateTh, lastTh0);
+
+  // Add to header row 2: AUTO + EASY (before last th)
+  const lastTh1 = rows1[1].lastElementChild;
+  ['AUTO','EASY'].forEach(lbl => {
+    const th = document.createElement('th');
+    th.className = 'sh-sub-hdr' + (lbl==='AUTO'?' sh-date-group':'');
+    th.textContent = lbl;
+    rows1[1].insertBefore(th, lastTh1);
+  });
+
+  // Add empty cells to each body row (before last td = add cell)
+  const etPlates = Object.keys(etData);
+  const asPlates = Object.keys(asData);
+  const allPlates = [...new Set([...etPlates,...asPlates])];
+  tbody.querySelectorAll('tr').forEach((tr, i) => {
+    const plate = allPlates[i];
+    const asPlate = asPlates.find(p=>normalizePlate(p)===normalizePlate(plate))||plate;
+    const lastTd = tr.lastElementChild;
+    ['autosweep','easytrip'].forEach((type,ti) => {
+      const curPlate = type==='easytrip'?plate:asPlate;
+      const td = document.createElement('td');
+      td.className = 'sh-bal empty' + (ti===0?' sh-date-group':'');
+      const input = document.createElement('input');
+      input.type='text'; input.inputMode='decimal';
+      input.className='sh-bal-input';
+      input.value=''; input.placeholder='—';
+      input.title=`${type==='easytrip'?'Easytrip':'Autosweep'} — ${curPlate} — ${dateStr}`;
+      input.addEventListener('blur',()=>{
+        const v=input.value.trim().replace(/,/g,'');
+        if(!v) return;
+        const b=parseFloat(v); if(isNaN(b)) {input.value='';return;}
+        saveRfidCell(type,curPlate,dateStr,b);
+        td.className='sh-bal'+(ti===0?' sh-date-group':'')+(b>=3000?' high':b>=1500?' mid':' low');
+        input.className='sh-bal-input'+(b<1500?' low':'');
+        input.value=b.toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+      });
+      input.addEventListener('keydown',e=>{if(e.key==='Enter')input.blur();if(e.key==='Escape'){input.value='';input.blur();}});
+      td.appendChild(input);
+      tr.insertBefore(td, lastTd);
+    });
+  });
 }
 
 function saveRfidCell(type, plate, date, newBal) {
