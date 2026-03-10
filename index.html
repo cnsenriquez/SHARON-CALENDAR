@@ -60,7 +60,7 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 .day-lbl{text-align:center;padding:9px 4px;font-size:.64rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rose-deep);}
 .day-lbl:first-child,.day-lbl:last-child{color:var(--rose);}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1.5px solid #c0ccc0;border-top:1.5px solid #c0ccc0;}
-.day-cell{height:120px;max-height:120px;padding:4px 5px 3px;cursor:pointer;background:#fafcfa;border-right:1.5px solid #c0ccc0;border-bottom:1.5px solid #c0ccc0;position:relative;overflow:hidden;transition:background .15s;vertical-align:top;}
+.day-cell{min-height:120px;padding:4px 5px 3px;cursor:pointer;background:#fafcfa;border-right:1.5px solid #c0ccc0;border-bottom:1.5px solid #c0ccc0;position:relative;overflow:visible;transition:background .15s;vertical-align:top;}
 .day-cell:hover{background:#fff5ee;}
 .day-cell.other-month{opacity:.35;background:#f2f4f2;}
 .day-cell.today{background:linear-gradient(160deg,#eef5f2,#e4f0ea);}
@@ -75,7 +75,7 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 .chip-note{font-size:.53rem;color:#5a7868;font-style:italic;font-weight:400;margin-top:0;padding-left:5px;line-height:1.45;}
 .more-chip{font-size:.52rem;color:var(--rose);font-weight:700;margin-top:1px;}
 @media(max-width:600px){
-  .day-cell{height:52px;max-height:52px;padding:3px 2px;}
+  .day-cell{min-height:52px;padding:3px 2px;}
   .chip{display:none;}
   .day-cell.has-ev::after{content:'';display:block;width:4px;height:4px;border-radius:50%;background:var(--rose);margin:2px auto 0;}
 }
@@ -821,43 +821,35 @@ function renderCalendar() {
     const cell = document.createElement('div');
     cell.className = 'day-cell'+(c.other?' other-month':'')+(isT?' today':'')+(hasAny?' has-ev':'');
     const n = document.createElement('div'); n.className='day-num'; n.textContent=c.d; cell.appendChild(n);
-    // Max chips per cell — auto-adjust based on content
-    const MAX_LINES = 5; // approx lines before +more kicks in
-    let linesUsed = 0;
-    let hiddenCount = 0;
-
     if(xlEv && !c.other) {
       const chip = document.createElement('div');
       const xd = !!xlDone[key];
       chip.className = 'chip chip-xl'+(xd?' chip-done':'');
       chip.textContent = (xd?'✓ ':'*')+xlTitle(key)+(xd?' – DONE':'');
-      cell.appendChild(chip); linesUsed++;
-      if(!xd && linesUsed < MAX_LINES) {
+      cell.appendChild(chip);
+      if(!xd) {
         const xlFull = xlEvs[key]||'';
         const xlNote = xlFull.slice(xlTitle(key).length).replace(/^[\r\n]+/,'').trim();
         if(xlNote) {
           const nd=document.createElement('div');
           nd.className='chip chip-note';
-          nd.textContent=xlNote.slice(0,55)+(xlNote.length>55?'…':'');
-          cell.appendChild(nd); linesUsed++;
+          nd.textContent=xlNote.slice(0,60)+(xlNote.length>60?'…':'');
+          cell.appendChild(nd);
         }
       }
     }
-
-    uEvs.forEach((ev, ei) => {
-      if(linesUsed >= MAX_LINES - 1) { hiddenCount++; return; }
+    uEvs.forEach(ev=>{
       const chip = document.createElement('div');
       chip.className = `chip ${ev.done?'chip-done':''}`;
       chip.textContent = '* '+(ev.time?fmt12(ev.time)+' ':'')+ev.title+(ev.done?' – DONE':'');
-      cell.appendChild(chip); linesUsed++;
-      if(!ev.done && ev.notes && linesUsed < MAX_LINES - 1) {
+      cell.appendChild(chip);
+      if(!ev.done && ev.notes) {
         const nd=document.createElement('div');
         nd.className='chip chip-note'+(ev.done?' chip-done':'');
-        nd.textContent=ev.notes.slice(0,45)+(ev.notes.length>45?'…':'');
-        cell.appendChild(nd); linesUsed++;
+        nd.textContent=ev.notes.slice(0,55)+(ev.notes.length>55?'…':'');
+        cell.appendChild(nd);
       }
     });
-    if(hiddenCount>0){const m=document.createElement('div');m.className='more-chip';m.textContent=`+${hiddenCount} more`;cell.appendChild(m);}
     cell.addEventListener('click',()=>scrollToMsDay(key));
     grid.appendChild(cell);
   });
