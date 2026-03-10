@@ -1531,16 +1531,17 @@ function saveRfidCell(type, plate, date, newBal) {
   const passData = type==='easytrip' ? etPass : asPass;
   if(!data[plate]) return;
   if(!passData[plate]) passData[plate]=[];
-  // Check if entry for this date already exists — update it
   const existing = passData[plate].find(r=>r.date===date);
   if(existing) {
     existing.balance = newBal; existing.amount = newBal;
   } else {
     passData[plate].push({type:'load',amount:newBal,date,balance:newBal});
   }
-  // Update main data if this is the latest date
   data[plate].balance = newBal;
   data[plate].date = date;
+  // Ensure date column exists in _rfidExtraDates
+  if(!window._rfidExtraDates) window._rfidExtraDates=[];
+  if(!window._rfidExtraDates.includes(date)) window._rfidExtraDates.push(date);
   saveAll();
 }
 
@@ -1552,18 +1553,10 @@ function renderRfidSpreadsheet() {
   const asPlates = Object.keys(asData);
   const allPlates = [...new Set([...etPlates, ...asPlates])];
 
-  // Collect all dates
+  // Columns come ONLY from explicitly added dates (_rfidExtraDates)
+  // Base info.date and passRec dates are added to _rfidExtraDates when saved
   const allDates = new Set();
-  etPlates.forEach(p => {
-    if(etData[p]?.date) allDates.add(etData[p].date);
-    (etPass[p]||[]).forEach(r => { if(r.date) allDates.add(r.date); });
-  });
-  asPlates.forEach(p => {
-    if(asData[p]?.date) allDates.add(asData[p].date);
-    (asPass[p]||[]).forEach(r => { if(r.date) allDates.add(r.date); });
-  });
-  // Include manually added date columns (even if no balances yet)
-  if(window._rfidExtraDates) window._rfidExtraDates.forEach(d => allDates.add(d));
+  if(window._rfidExtraDates) window._rfidExtraDates.forEach(d => allDates.add(fmtDate(d)));
 
   const sortedDates = [...allDates].sort((a,b)=>{
     const pa=new Date(a), pb=new Date(b);
