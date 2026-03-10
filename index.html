@@ -1428,7 +1428,9 @@ function addRfidDateColumn() {
 function confirmAddDateColumn() {
   const raw = document.getElementById('addColDateInput').value;
   if(!raw) return;
-  const dateStr = new Date(raw + 'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
+  const _d = new Date(raw + 'T00:00:00');
+  const _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dateStr = _months[_d.getMonth()] + ' ' + _d.getDate() + ', ' + _d.getFullYear();
   document.getElementById('addColModalBg').classList.remove('open');
 
   if(!window._rfidExtraDates) window._rfidExtraDates = [];
@@ -1449,8 +1451,9 @@ function rfidAddColumnToDOM(dateStr) {
   const tbody = tbl.querySelector('tbody');
   const rows1 = thead.querySelectorAll('tr');
 
-  // Add to header row 1: date th (before last th = + Date button)
-  const lastTh0 = rows1[0].lastElementChild;
+  // Insert BEFORE the first existing date column (after plate header) = leftmost = latest
+  const plateTh = rows1[0].querySelector('.sh-plate-hdr');
+  const firstDateTh = plateTh ? plateTh.nextElementSibling : null;
   const dateTh = document.createElement('th');
   dateTh.className = 'sh-date-hdr sh-date-group';
   dateTh.colSpan = 2;
@@ -1459,15 +1462,15 @@ function rfidAddColumnToDOM(dateStr) {
     style="position:absolute;top:3px;right:4px;background:rgba(255,255,255,.15);border:none;color:rgba(255,255,255,.7);cursor:pointer;border-radius:4px;font-size:.6rem;padding:1px 5px;line-height:1.4;font-family:'Nunito',sans-serif"
     onmouseover="this.style.background='rgba(180,60,60,.7)';this.style.color='#fff'"
     onmouseout="this.style.background='rgba(255,255,255,.15)';this.style.color='rgba(255,255,255,.7)'">✕</button>`;
-  rows1[0].insertBefore(dateTh, lastTh0);
+  rows1[0].insertBefore(dateTh, firstDateTh);
 
-  // Add to header row 2: AUTO + EASY (before last th)
-  const lastTh1 = rows1[1].lastElementChild;
+  // Add AUTO + EASY sub-headers — insert before first existing sub-header
+  const firstSubHdr = rows1[1].querySelector('.sh-sub-hdr');
   ['AUTO','EASY'].forEach(lbl => {
     const th = document.createElement('th');
     th.className = 'sh-sub-hdr' + (lbl==='AUTO'?' sh-date-group':'');
     th.textContent = lbl;
-    rows1[1].insertBefore(th, lastTh1);
+    rows1[1].insertBefore(th, firstSubHdr);
   });
 
   // Add empty cells to each body row (before last td = add cell)
@@ -1498,7 +1501,9 @@ function rfidAddColumnToDOM(dateStr) {
       });
       input.addEventListener('keydown',e=>{if(e.key==='Enter')input.blur();if(e.key==='Escape'){input.value='';input.blur();}});
       td.appendChild(input);
-      tr.insertBefore(td, lastTd);
+      // Insert after plate cell (index 1 = first balance cell)
+      const firstBalCell = tr.children[1];
+      tr.insertBefore(td, firstBalCell || lastTd);
     });
   });
 }
@@ -1544,7 +1549,7 @@ function renderRfidSpreadsheet() {
 
   const sortedDates = [...allDates].sort((a,b)=>{
     const pa=new Date(a), pb=new Date(b);
-    return (isNaN(pa)||isNaN(pb)) ? a.localeCompare(b) : pa-pb;
+    return (isNaN(pa)||isNaN(pb)) ? b.localeCompare(a) : pb-pa; // latest first (left)
   });
 
   if(!allPlates.length) {
