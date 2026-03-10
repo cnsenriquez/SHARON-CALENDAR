@@ -1361,6 +1361,24 @@ function deleteDrvDate(date) {
 }
 
 // ═══════════════════ RFID SPREADSHEET ═══════════════════
+const _MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(raw) {
+  if(!raw) return raw;
+  // Already formatted like "Mar 9, 2026" — leave it
+  if(/^[A-Za-z]/.test(raw)) return raw;
+  // ISO format "2026-03-09" — convert
+  const d = new Date(raw + 'T00:00:00');
+  if(isNaN(d)) return raw;
+  return _MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+}
+function normalizeRfidDates() {
+  // Fix dates in etData, asData, etPass, asPass, _rfidExtraDates
+  Object.keys(etData).forEach(p => { etData[p].date = fmtDate(etData[p].date); });
+  Object.keys(asData).forEach(p => { asData[p].date = fmtDate(asData[p].date); });
+  Object.keys(etPass).forEach(p => { (etPass[p]||[]).forEach(r => { r.date = fmtDate(r.date); }); });
+  Object.keys(asPass).forEach(p => { (asPass[p]||[]).forEach(r => { r.date = fmtDate(r.date); }); });
+  if(window._rfidExtraDates) window._rfidExtraDates = window._rfidExtraDates.map(fmtDate);
+}
 const RFID_LOW_THRESHOLD = 1500;
 
 function normalizePlate(p) { return p.replace(/[\s\-\/]+/g,'').toUpperCase(); }
@@ -2236,7 +2254,7 @@ document.getElementById('evTitle').addEventListener('keydown',e=>{if(e.key==='En
 // Firebase module will call window._fbInit(docRef) when ready
 // If it doesn't call within 4s, fall back to localStorage
 const _fbTimeout = setTimeout(()=>{
-  if(!DOC_REF){ console.warn('Firebase timeout — using localStorage'); renderCalendar(); renderSummary(); }
+  if(!window._fsReady){ console.warn('Firebase timeout — using localStorage'); normalizeRfidDates(); renderCalendar(); renderSummary(); }
 }, 4000);
 
 window._fbInit = function(loadFn, saveFn) {
@@ -2256,6 +2274,8 @@ window._fbInit = function(loadFn, saveFn) {
       if(d.asPass) asPass = d.asPass;
       if(d.notesData) notesData = d.notesData;
       if(d.rfidExtraDates) window._rfidExtraDates = d.rfidExtraDates;
+      // Normalize any ISO-format dates in RFID data
+      normalizeRfidDates();
       saveData('sharon_v4', userEvs);
       saveData('sharon_xl_evs', xlEvs);
       saveData('sharon_xl_done', xlDone);
