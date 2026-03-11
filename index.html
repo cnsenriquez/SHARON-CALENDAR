@@ -606,11 +606,25 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
       <div class="sec-title">Drivers' <em>Schedule</em></div>
       <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">
         <button class="add-btn" style="background:linear-gradient(135deg,#a0b89a,#7da075)" onclick="restoreDrvData()">↺ Restore</button>
+        <button class="add-btn" style="background:#5a8070" onclick="copyDrvSchedule()">📋 Copy</button>
+        <button class="add-btn" style="background:#3d5c4a" onclick="printDrvSchedule()">🖨 Print / PDF</button>
         <button class="add-btn" onclick="openAddDayModal()">＋ Add Day</button>
       </div>
     </div>
     <div class="drv-sort-note" style="margin-bottom:10px;margin-left:2px">Latest first · Click a day to expand</div>
     <div class="drv-cards" id="drvCards"></div>
+    <div style="text-align:center;padding:28px 16px 20px;margin-top:16px;border-top:1px dashed var(--border);">
+      <div style="font-family:'Playfair Display',serif;font-size:.88rem;color:var(--rose-deep);font-style:italic;margin-bottom:10px;line-height:1.7">
+        Pray po palagi at ingat po. 🙏
+      </div>
+      <div style="font-family:'Playfair Display',serif;font-style:italic;font-size:.82rem;color:var(--text2);line-height:1.7;max-width:420px;margin:0 auto">
+        "The LORD will keep you from all harm—<br>He will watch over your life."
+      </div>
+      <div style="font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--rose);margin-top:8px">
+        Psalm 121:7
+      </div>
+      <div style="margin-top:10px;font-size:1rem">🌿 ✝️ 🌿</div>
+    </div>
   </div>
 
   <!-- EASYTRIP TAB -->
@@ -757,7 +771,7 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 // ═══════════════════ CONSTANTS & STATE ═══════════════════
 const COLORS = ['#e8927c','#d4a96a','#89b5a0','#c4a8d4','#7bb8d8'];
 const DRIVER_NAMES = ["Agustin", "Anthony", "Benjie", "Jake", "Rey"];
-const DRIVER_CARS = ["Amapola", "Commute", "Day Off", "Day Off na", "Ford", "Ford \u2013 di tuloy", "Grandia", "Grandia & Isuzu Pick Up", "Grandia & L3", "Hilux", "Hilux Shuttle", "Isuzu  Pick Up / Ford", "Isuzu Pick", "Isuzu Pick Up", "Isuzu Pick Up pero nagpalit sila ni Kuya Jake"];
+const DRIVER_CARS = ["Amapola", "Commute", "Day Off", "Day Off na", "Ford Territory", "Ford Territory – di tuloy", "Grandia", "Grandia & Isuzu Pick Up", "Grandia & L3", "Hilux", "Hilux Shuttle", "Isuzu Pick Up", "Isuzu Pick Up / Ford Territory", "Red Innova", "Red Innova & Isuzu Pick Up"];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS_F = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const DAYS_S = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -809,11 +823,21 @@ const DRV_BASE = [{"date": "2025-11-10", "driver": "Benjie", "car": "Grandia", "
 let drvData = loadData('sharon_drv', DRV_BASE);
 
 // RFID data (editable)
-const ET_BASE = {};
-const AS_BASE = {};
-let etData = loadData('sharon_et', ET_BASE);
+const ET_BASE = {
+  'NJK 1379': {balance:0, date:'', note:'Grandia'},
+  'NIU 4271': {balance:0, date:'', note:'Ford Territory'},
+  'NIC 5906': {balance:0, date:'', note:'Red Innova'},
+  'NIJ 5047': {balance:0, date:'', note:'Isuzu Pick Up'},
+};
+const AS_BASE = {
+  'NJK 1379': {balance:0, date:'', note:'Grandia'},
+  'NIU 4271': {balance:0, date:'', note:'Ford Territory'},
+  'NIC 5906': {balance:0, date:'', note:'Red Innova'},
+  'NIJ 5047': {balance:0, date:'', note:'Isuzu Pick Up'},
+};
+let etData = Object.assign({}, ET_BASE, loadData('sharon_et', {}));
 window._rfidExtraDates = loadData('sharon_rfid_dates', []);
-let asData = loadData('sharon_as', AS_BASE);
+let asData = Object.assign({}, AS_BASE, loadData('sharon_as', {}));
 let etPass = loadData('sharon_etpass', {});   // {plate: [{date,amount,type,balance,note}]}
 let asPass = loadData('sharon_aspass', {});
 
@@ -1537,7 +1561,9 @@ function getBalMap(data, passData, plate) {
 function clearAllRfidData() {
   if(!confirm('Clear ALL RFID plate data? This cannot be undone.')) return;
   etData = {}; asData = {}; etPass = {}; asPass = {};
-  saveData('sharon_et', {}); saveData('sharon_as', {});
+  // Reset to base plates with empty balances
+  etData = JSON.parse(JSON.stringify(ET_BASE)); asData = JSON.parse(JSON.stringify(AS_BASE));
+  saveData('sharon_et', etData); saveData('sharon_as', asData);
   saveData('sharon_etpass', {}); saveData('sharon_aspass', {});
   saveToFirestore();
   renderRfidSpreadsheet();
@@ -1704,6 +1730,36 @@ function renderRfidSpreadsheet() {
 
   if(!allPlates.length) {
     wrap.innerHTML='<div style="text-align:center;color:var(--muted);padding:40px;font-style:italic">No plates yet. Click ＋ to add.</div>';
+    return;
+  }
+
+  // If plates exist but no date columns yet, show plates with prompt to add a date
+  if(!sortedDates.length) {
+    const noDateDiv = document.createElement('div');
+    noDateDiv.style.cssText = 'background:#fff;border-radius:14px;border:1.5px solid var(--border);overflow:hidden;box-shadow:0 4px 18px var(--sh)';
+
+    // Table showing just the plate names
+    let tblHtml = `<table class="rfid-sheet" style="width:100%">
+      <thead><tr>
+        <th class="sh-plate-hdr">PLATE</th>
+        <th class="sh-date-hdr" colspan="2" style="text-align:center;font-size:.72rem;opacity:.7">— Click ＋ Add Date to enter balances —</th>
+      </tr>
+      <tr>
+        <th></th>
+        <th class="sh-sub-hdr sh-date-group">AUTO</th>
+        <th class="sh-sub-hdr">EASY</th>
+      </tr></thead><tbody>`;
+    allPlates.forEach(plate => {
+      const note = etData[plate]?.note || asData[plate]?.note || '';
+      tblHtml += `<tr>
+        <td class="sh-plate-cell">${esc(plate)}${note ? '<span style="font-size:.68rem;color:var(--muted);margin-left:6px">' + esc(note) + '</span>' : ''}</td>
+        <td class="sh-bal empty" style="text-align:center;color:#bbb;font-size:.75rem">—</td>
+        <td class="sh-bal empty" style="text-align:center;color:#bbb;font-size:.75rem">—</td>
+      </tr>`;
+    });
+    tblHtml += '</tbody></table>';
+    noDateDiv.innerHTML = tblHtml;
+    wrap.appendChild(noDateDiv);
     return;
   }
 
@@ -2823,6 +2879,187 @@ function doPdfPrint(){
   closePdfModal();
 }
 
+
+// ═══════════════════ DRIVER SCHEDULE EXPORT ═══════════════════
+
+function getDrvScheduleText(dateKey) {
+  const byDate = {};
+  drvData.forEach(r => {
+    if(!byDate[r.date]) byDate[r.date] = [];
+    byDate[r.date].push(r);
+  });
+
+  if(!dateKey) {
+    const sorted = Object.keys(byDate).sort().reverse();
+    dateKey = sorted[0] || null;
+  }
+  if(!dateKey) { alert('No driver schedule found.'); return null; }
+
+  const [y,mo,day] = dateKey.split('-').map(Number);
+  const dateObj = new Date(y, mo-1, day);
+  const dow = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dateObj.getDay()];
+  const moName = ['January','February','March','April','May','June','July','August','September','October','November','December'][mo-1];
+
+  let lines = [];
+  lines.push(`${dow}, ${moName} ${day}, ${y}`);
+  lines.push('');
+  (byDate[dateKey]||[]).forEach(r => {
+    lines.push(`🚗 ${r.driver}${r.car ? ' — ' + r.car : ''}`);
+    if(r.errand) r.errand.split('\n').forEach(l => { if(l.trim()) lines.push('   ' + l.trim()); });
+    lines.push('');
+  });
+  lines.push('Pray po palagi at ingat po. 🙏');
+  lines.push('"The LORD will keep you from all harm—');
+  lines.push(' He will watch over your life."');
+  lines.push('— Psalm 121:7');
+
+  return lines.join('\n');
+}
+
+function copyDrvSchedule() {
+  // Open date picker in copy mode
+  openDrvPicker('copy');
+}
+
+async function doCopyDrv(dateKey) {
+  const text = getDrvScheduleText(dateKey);
+  if(!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const toast = document.createElement('div');
+    toast.textContent = '✓ Copied! Ready to paste sa Viber/chat 🌸';
+    toast.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#3d5c4a;color:#fff;padding:10px 22px;border-radius:20px;font-family:"Nunito",sans-serif;font-size:.85rem;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:popIn .25s ease both';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2800);
+  } catch(e) {
+    prompt('Copy this (Ctrl+A then Ctrl+C):', text);
+  }
+}
+
+function printDrvSchedule() {
+  openDrvPicker('print');
+}
+
+let _drvPickerMode = 'copy';
+function openDrvPicker(mode) {
+  _drvPickerMode = mode;
+  _drvPrintDate = null;
+  const sorted = [...new Set(drvData.map(r=>r.date))].sort().reverse();
+  if(!sorted.length) { alert('No driver schedule found.'); return; }
+
+  document.getElementById('drvPickerTitle').textContent = mode==='copy' ? '📋 Copy Driver Schedule' : '🖨 Print / PDF Driver Schedule';
+  document.getElementById('drvPickerConfirmBtn').textContent = mode==='copy' ? '📋 Copy ✦' : '🖨 Print / PDF ✦';
+
+  let btnHtml = sorted.map(d => {
+    const [y,mo,day] = d.split('-').map(Number);
+    const dateObj = new Date(y, mo-1, day);
+    const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dateObj.getDay()];
+    const moName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][mo-1];
+    return `<button onclick="doPrintDrvDate('${d}',this)"
+      style="padding:8px 14px;border:1.5px solid #c0d0c0;border-radius:10px;background:#fafcfa;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;cursor:pointer;color:#3d5c4a;transition:all .15s"
+      onmouseover="this.style.background='#e0eeea'"
+      onmouseout="this.style.background=this.classList.contains('sel')?'#3d5c4a':'#fafcfa'">
+      ${dow}, ${moName} ${day}
+    </button>`;
+  }).join('');
+
+  document.getElementById('drvPrintPickerDates').innerHTML = btnHtml;
+  document.getElementById('drvPrintPickerBg').classList.add('open');
+}
+
+let _drvPrintDate = null;
+function doPrintDrvDate(dateKey, btn) {
+  _drvPrintDate = dateKey;
+  document.querySelectorAll('#drvPrintPickerDates button').forEach(b => {
+    b.classList.remove('sel');
+    b.style.background = '#fafcfa';
+    b.style.color = '#3d5c4a';
+  });
+  btn.classList.add('sel');
+  btn.style.background = '#3d5c4a';
+  btn.style.color = '#fff';
+}
+
+function confirmPrintDrv() {
+  if(!_drvPrintDate) { alert('Select a date first.'); return; }
+  document.getElementById('drvPrintPickerBg').classList.remove('open');
+  if(_drvPickerMode === 'copy') { doCopyDrv(_drvPrintDate); return; }
+
+  const byDate = {};
+  drvData.forEach(r => {
+    if(!byDate[r.date]) byDate[r.date] = [];
+    byDate[r.date].push(r);
+  });
+
+  const d = _drvPrintDate;
+  const [y,mo,day] = d.split('-').map(Number);
+  const dateObj = new Date(y, mo-1, day);
+  const dow = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dateObj.getDay()];
+  const moFull = ['January','February','March','April','May','June','July','August','September','October','November','December'][mo-1];
+
+  let rows = '';
+  (byDate[d]||[]).forEach(r => {
+    const errandHtml = (r.errand||'').split('\n').map(l => `<div class="dp-line">${esc(l)}</div>`).join('');
+    rows += `<div class="dp-row">
+      <div class="dp-driver">${esc(r.driver)}</div>
+      <div class="dp-car">${r.car ? '🚗 ' + esc(r.car) : ''}</div>
+      <div class="dp-errand">${errandHtml}</div>
+    </div>`;
+  });
+
+  const printHTML = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>Driver Schedule — ${dow}, ${moFull} ${day}, ${y}</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Arial,sans-serif; font-size:11pt; color:#222; background:#fff; padding:24pt 28pt; }
+    .dp-header { border-bottom:3pt solid #3d5c4a; padding-bottom:10pt; margin-bottom:20pt; }
+    .dp-header h1 { font-size:18pt; color:#3d5c4a; font-weight:800; }
+    .dp-header .dp-sub { font-size:10pt; color:#888; margin-top:3pt; }
+    .dp-row { display:grid; grid-template-columns:90pt 110pt 1fr; gap:8pt; align-items:start; padding:10pt 0; border-bottom:1pt solid #e8f0ec; break-inside:avoid; }
+    .dp-driver { font-size:12pt; font-weight:800; color:#3d5c4a; }
+    .dp-car { font-size:9.5pt; color:#5a8070; font-weight:600; padding-top:1pt; }
+    .dp-errand { font-size:10pt; color:#333; line-height:1.6; }
+    .dp-line { padding:1pt 0; }
+    .dp-verse { text-align:center; margin-top:28pt; padding-top:14pt; border-top:1pt solid #c0d0c0; }
+    .dp-verse-msg { font-size:10pt; color:#5a8070; font-style:italic; margin-bottom:6pt; }
+    .dp-verse-text { font-size:10pt; color:#444; font-style:italic; line-height:1.7; font-family:Georgia,serif; }
+    .dp-verse-ref { font-size:8pt; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#7a9e8e; margin-top:5pt; }
+    .dp-verse-icons { margin-top:8pt; font-size:13pt; }
+    @media print { body { padding:14pt 18pt; } .dp-row { break-inside:avoid; } }
+  </style>
+  </head><body>
+  <div class="dp-header">
+    <h1>${dow}, ${moFull} ${day}, ${y}</h1>
+    <div class="dp-sub">Driver's Schedule</div>
+  </div>
+  ${rows}
+  <div class="dp-verse">
+    <div class="dp-verse-msg">Pray po palagi at ingat po. 🙏</div>
+    <div class="dp-verse-text">"The LORD will keep you from all harm—<br>He will watch over your life."</div>
+    <div class="dp-verse-ref">Psalm 121:7</div>
+    <div class="dp-verse-icons">🌿 ✝️ 🌿</div>
+  </div>
+  
+<!-- DRIVER PRINT/COPY PICKER MODAL -->
+<div class="modal-bg" id="drvPrintPickerBg" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:380px" onclick="event.stopPropagation()">
+    <h2 id="drvPickerTitle">📋 Copy <em>Driver Schedule</em></h2>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">Select a date:</p>
+    <div id="drvPrintPickerDates" style="display:flex;flex-wrap:wrap;gap:8px;max-height:260px;overflow-y:auto;padding:4px 0"></div>
+    <div class="modal-btns" style="margin-top:18px">
+      <button class="cancel-btn" onclick="document.getElementById('drvPrintPickerBg').classList.remove('open')">Cancel</button>
+      <button class="save-btn" id="drvPickerConfirmBtn" onclick="confirmPrintDrv()">📋 Copy ✦</button>
+    </div>
+  </div>
+</div>
+</body></html>`;
+
+  const win = window.open('','_blank','width=800,height=900');
+  win.document.write(printHTML);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+}
+
 // ═══════════════════ INIT ═══════════════════
 buildSwatches();
 // Update planner year in header dynamically
@@ -2847,8 +3084,8 @@ window._fbInit = function(loadFn, saveFn) {
       if(d.xlEvs && Object.keys(d.xlEvs).length) xlEvs = d.xlEvs;
       if(d.xlDone) xlDone = d.xlDone;
       if(d.drvData && d.drvData.length) drvData = d.drvData;
-      if(d.etData) etData = d.etData;
-      if(d.asData) asData = d.asData;
+      if(d.etData) etData = Object.assign({}, ET_BASE, d.etData);
+      if(d.asData) asData = Object.assign({}, AS_BASE, d.asData);
       if(d.etPass) etPass = d.etPass;
       if(d.asPass) asPass = d.asPass;
       if(d.notesData) notesData = d.notesData;
@@ -2932,21 +3169,18 @@ if (window._pendingInit) { window._fbInit(window._pendingInit.load, window._pend
   <option value="Rey">
 </datalist>
 <datalist id="driverCarList">
+  <option value="Grandia">
+  <option value="Ford Territory">
+  <option value="Red Innova">
+  <option value="Isuzu Pick Up">
+  <option value="Grandia & Isuzu Pick Up">
+  <option value="Red Innova & Isuzu Pick Up">
   <option value="Amapola">
+  <option value="Hilux">
+  <option value="Hilux Shuttle">
   <option value="Commute">
   <option value="Day Off">
   <option value="Day Off na">
-  <option value="Ford">
-  <option value="Ford – di tuloy">
-  <option value="Grandia">
-  <option value="Grandia & Isuzu Pick Up">
-  <option value="Grandia & L3">
-  <option value="Hilux">
-  <option value="Hilux Shuttle">
-  <option value="Isuzu  Pick Up / Ford">
-  <option value="Isuzu Pick">
-  <option value="Isuzu Pick Up">
-  <option value="Isuzu Pick Up pero nagpalit sila ni Kuya Jake">
 </datalist>
 
 <!-- PASS RECORDS MODAL -->
@@ -3082,6 +3316,19 @@ if (window._pendingInit) { window._fbInit(window._pendingInit.load, window._pend
     <div class="modal-btns">
       <button class="cancel-btn" onclick="document.getElementById('monSecModalBg').classList.remove('open')">Cancel</button>
       <button class="save-btn" onclick="saveMonSection()">Save Section ✦</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRIVER PRINT/COPY PICKER MODAL -->
+<div class="modal-bg" id="drvPrintPickerBg" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:380px" onclick="event.stopPropagation()">
+    <h2 id="drvPickerTitle">📋 Copy <em>Driver Schedule</em></h2>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">Select a date:</p>
+    <div id="drvPrintPickerDates" style="display:flex;flex-wrap:wrap;gap:8px;max-height:260px;overflow-y:auto;padding:4px 0"></div>
+    <div class="modal-btns" style="margin-top:18px">
+      <button class="cancel-btn" onclick="document.getElementById('drvPrintPickerBg').classList.remove('open')">Cancel</button>
+      <button class="save-btn" id="drvPickerConfirmBtn" onclick="confirmPrintDrv()">📋 Copy ✦</button>
     </div>
   </div>
 </div>
