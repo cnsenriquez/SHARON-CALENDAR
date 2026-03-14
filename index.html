@@ -2486,6 +2486,180 @@ function getMonCols(tbl) {
   return MON_MONTHS.map(m => ({key:m, label:m, group:null}));
 }
 
+
+// ── ID-based row helpers (avoids ri index mismatch) ──
+function findMonRowById(ti, rowId, grpEncoded) {
+  const tbl = monSheet[ti];
+  if(!tbl) return null;
+  const grpLabel = grpEncoded ? decodeURIComponent(grpEncoded) : null;
+  if(grpLabel) {
+    const g = tbl.groups?.find(g => g.label === grpLabel);
+    return g?.rows.find(r => r.id === rowId) || null;
+  }
+  return tbl.rows?.find(r => r.id === rowId) || null;
+}
+
+function deleteMonRowById(rowId, ti, grpEncoded) {
+  if(!confirm('Delete this row?')) return;
+  const tbl = monSheet[ti];
+  const grpLabel = grpEncoded ? decodeURIComponent(grpEncoded) : null;
+  if(grpLabel) {
+    const g = tbl.groups?.find(g => g.label === grpLabel);
+    if(g) { const i = g.rows.findIndex(r => r.id === rowId); if(i > -1) g.rows.splice(i, 1); }
+  } else {
+    const i = tbl.rows?.findIndex(r => r.id === rowId);
+    if(i > -1) tbl.rows.splice(i, 1);
+  }
+  saveMonSheet(); renderMonSpreadsheet();
+}
+
+function renameMonRowById(e, rowId, ti, grpEncoded) {
+  const row = findMonRowById(ti, rowId, grpEncoded);
+  if(!row) return;
+  const span = e.target;
+  const origName = row.name;
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = origName;
+  inp.style.cssText = 'width:100%;border:none;background:#fffbe6;outline:2px solid #c8a840;border-radius:4px;font-family:"Nunito",sans-serif;font-size:.78rem;font-weight:600;padding:2px 4px;box-sizing:border-box;';
+  span.replaceWith(inp);
+  inp.focus(); inp.select();
+  const commit = () => {
+    const newName = inp.value.trim() || origName;
+    row.name = newName;
+    saveMonSheet(); renderMonSpreadsheet();
+  };
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', e => {
+    if(e.key === 'Enter') inp.blur();
+    if(e.key === 'Escape') { inp.value = origName; inp.blur(); }
+  });
+}
+
+function monCellSaveById(inp, ti, rowId, key, grpEncoded) {
+  const v = inp.value.trim();
+  const row = findMonRowById(ti, rowId, grpEncoded);
+  if(!row) return;
+  const existing = row.cells[key];
+  const existingColor = getCellColor(existing);
+  row.cells[key] = existingColor ? {value:v, color:existingColor} : v;
+  const vUp = v.toUpperCase();
+  const td = inp.closest('.mon-cell');
+  if(td) {
+    const cls = (!existingColor && MON_CELL_CLASSES[vUp]) ? MON_CELL_CLASSES[vUp] : '';
+    td.className = 'mon-cell' + (cls?' '+cls:'');
+    if(existingColor) td.style.background = existingColor;
+  }
+  inp.dataset.orig = v;
+  saveMonSheet();
+}
+
+function openMonColorPickerById(e, ti, rowId, key, grpEncoded, dotEl) {
+  if(_monCpEl) { _monCpEl.remove(); _monCpEl=null; }
+  const pop = document.createElement('div');
+  pop.className = 'mon-color-picker-pop';
+  MON_CELL_PALETTE.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'mon-cp-swatch';
+    sw.style.background = c;
+    if(c==='#ffffff') sw.style.border = '2px solid #ddd';
+    sw.onclick = () => { setMonCellColorById(ti, rowId, key, grpEncoded, c, dotEl); pop.remove(); _monCpEl=null; };
+    pop.appendChild(sw);
+  });
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'mon-cp-clear';
+  clearBtn.textContent = '✕ Clear color';
+  clearBtn.onclick = () => { setMonCellColorById(ti, rowId, key, grpEncoded, '', dotEl); pop.remove(); _monCpEl=null; };
+  pop.appendChild(clearBtn);
+  const rect = dotEl.getBoundingClientRect();
+  pop.style.left = Math.min(rect.left, window.innerWidth-160)+'px';
+  pop.style.top = (rect.bottom+4)+'px';
+  document.body.appendChild(pop);
+  _monCpEl = pop;
+  setTimeout(()=>document.addEventListener('click',()=>{if(_monCpEl){_monCpEl.remove();_monCpEl=null;}},{once:true}),10);
+}
+
+function setMonCellColorById(ti, rowId, key, grpEncoded, color, dotEl) {
+  const row = findMonRowById(ti, rowId, grpEncoded);
+  if(!row) return;
+  const existing = row.cells[key];
+  const val = getCellVal(existing);
+  row.cells[key] = color ? {value:val, color:color} : val;
+  const td = dotEl?.closest('.mon-cell');
+  if(td) {
+    if(color) { td.style.background = color; td.className = 'mon-cell'; }
+    else { td.style.background = ''; const vUp = val.toUpperCase(); td.className = 'mon-cell' + (MON_CELL_CLASSES[vUp]?' '+MON_CELL_CLASSES[vUp]:''); }
+    if(dotEl) dotEl.style.cssText = color ? 'background:'+color+';filter:brightness(.75)' : 'background:#d0d8d4';
+  }
+  saveMonSheet();
+}
+
+
+function showMonRowMenuById(e, ti, rowId, grpEncoded) {
+  if(_monRowMenuEl) _monRowMenuEl.remove();
+  const menu = document.createElement('div');
+  menu.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:9999;padding:6px;min-width:160px;font-family:'Nunito',sans-serif;font-size:.8rem;`;
+  const items = [
+    {icon:'✏️', label:'Rename row', action:() => {
+      const row = findMonRowById(parseInt(ti), rowId, grpEncoded);
+      if(!row) return;
+      const n = prompt('Rename:', row.name);
+      if(n && n.trim()) { row.name = n.trim(); saveMonSheet(); renderMonSpreadsheet(); }
+    }},
+    {icon:'🗑', label:'Delete row', danger:true, action:() => deleteMonRowById(rowId, parseInt(ti), grpEncoded)},
+  ];
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.style.cssText = `padding:8px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;color:${item.danger?'#c03030':'#2c3830'};`;
+    div.innerHTML = `${item.icon} ${item.label}`;
+    div.onmouseenter = () => div.style.background = item.danger?'#ffeaea':'#f0f5f2';
+    div.onmouseleave = () => div.style.background = '';
+    div.onclick = () => { menu.remove(); _monRowMenuEl=null; item.action(); };
+    menu.appendChild(div);
+  });
+  document.body.appendChild(menu);
+  _monRowMenuEl = menu;
+  setTimeout(()=>document.addEventListener('click',()=>{if(_monRowMenuEl){_monRowMenuEl.remove();_monRowMenuEl=null;}},{once:true}),10);
+}
+
+function showMonCellMenuById(e, inp, row, key, td, ti, rowId, grpEncoded) {
+  if(_monMenuEl) _monMenuEl.remove();
+  const menu = document.createElement('div');
+  menu.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:9999;padding:6px;min-width:150px;font-family:'Nunito',sans-serif;font-size:.78rem;`;
+  ['PAID','PENDING','UNPAID','CANCELED','N/A','ASSUME','WRONG BILL','SOA',''].forEach(status => {
+    const c = MON_CELL_COLORS[status] || '#fafcfa';
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;';
+    item.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${c};border:1px solid rgba(0,0,0,.1);flex-shrink:0"></span>${status||'(clear)'}`;
+    item.onmouseenter = () => item.style.background = '#f0f5f2';
+    item.onmouseleave = () => item.style.background = '';
+    item.onclick = () => {
+      if(inp) inp.value = status;
+      monCellSaveById(inp||{value:status,closest:()=>td,dataset:{orig:status}}, parseInt(ti), rowId, key, grpEncoded);
+      const cls = MON_CELL_CLASSES[status.toUpperCase()] || '';
+      td.className = 'mon-cell' + (cls?' '+cls:'');
+      td.style.background = '';
+      menu.remove(); _monMenuEl=null;
+    };
+    menu.appendChild(item);
+  });
+  // Color picker option
+  const colorDiv = document.createElement('div');
+  colorDiv.style.cssText = 'padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid #eee;margin-top:4px;';
+  colorDiv.innerHTML = '🎨 Set color…';
+  colorDiv.onmouseenter = () => colorDiv.style.background = '#f0f5f2';
+  colorDiv.onmouseleave = () => colorDiv.style.background = '';
+  colorDiv.onclick = () => {
+    menu.remove(); _monMenuEl=null;
+    const dot = td.querySelector('.mon-cell-color-dot');
+    openMonColorPickerById({clientX:e.clientX,clientY:e.clientY}, parseInt(ti), rowId, key, grpEncoded, dot||td);
+  };
+  menu.appendChild(colorDiv);
+
+  document.body.appendChild(menu);
+  _monMenuEl = menu;
+  setTimeout(()=>document.addEventListener('click',()=>{if(_monMenuEl){_monMenuEl.remove();_monMenuEl=null;}},{once:true}),10);
+}
 function renderMonSpreadsheet() {
   const wrap = document.getElementById('monSpreadsheet');
   if(!wrap) return;
@@ -2556,12 +2730,14 @@ function getCellVal(raw) { return (typeof raw==='object' && raw!==null) ? (raw.v
 function getCellColor(raw) { return (typeof raw==='object' && raw!==null) ? (raw.color||'') : ''; }
 
 function buildDataRow(row, cols, ti, ri, groupLabel) {
-  let cells = `<td class="mon-name-cell" title="Double-click to rename">
+  const rowId = row.id || '';
+  const grpStr = groupLabel ? encodeURIComponent(groupLabel) : '';
+  let cells = `<td class="mon-name-cell" data-rowid="${rowId}" data-ti="${ti}" data-grp="${grpStr}" title="Double-click to rename">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:3px">
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;cursor:text"
-        ondblclick="renameMonRowInline(event,${ti},${ri},${JSON.stringify(groupLabel)})"
+        ondblclick="renameMonRowById(event,'${rowId}',${ti},'${grpStr}')"
         title="Double-click to rename">${esc(row.name)}</span>
-      <button onclick="deleteMonRow(${ti},${ri},${JSON.stringify(groupLabel)})" style="background:none;border:none;color:#b0b0b0;cursor:pointer;font-size:.62rem;padding:1px 3px;flex-shrink:0" title="Delete row">✕</button>
+      <button onclick="deleteMonRowById('${rowId}',${ti},'${grpStr}')" style="background:none;border:none;color:#b0b0b0;cursor:pointer;font-size:.62rem;padding:1px 3px;flex-shrink:0" title="Delete row">✕</button>
     </div>
   </td>`;
   cols.forEach(col => {
@@ -2572,18 +2748,18 @@ function buildDataRow(row, cols, ti, ri, groupLabel) {
     const cls = (!bgColor && MON_CELL_CLASSES[vUp]) ? MON_CELL_CLASSES[vUp] : '';
     const bgStyle = bgColor ? `background:${bgColor}!important;` : '';
     const dotStyle = bgColor ? `background:${bgColor};filter:brightness(.75)` : 'background:#d0d8d4';
-    cells += `<td class="mon-cell${cls?' '+cls:''}" data-ti="${ti}" data-ri="${ri}" data-key="${col.key}" data-grp="${groupLabel||''}" style="${bgStyle}">
+    cells += `<td class="mon-cell${cls?' '+cls:''}" data-ti="${ti}" data-rowid="${rowId}" data-key="${col.key}" data-grp="${grpStr}" style="${bgStyle}">
       <div class="mon-cell-wrap">
         <input type="text" class="mon-cell-input" value="${esc(val)}" placeholder=""
           onfocus="this.select()"
-          onblur="monCellSave(this,${ti},${ri},'${col.key}',${JSON.stringify(groupLabel)})"
+          onblur="monCellSaveById(this,${ti},'${rowId}','${col.key}','${grpStr}')"
           onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig||'';this.blur();}"
           data-orig="${esc(val)}"
           style="padding-right:16px"
         />
         <div class="mon-cell-color-dot" style="${dotStyle}"
-          onclick="event.stopPropagation();openMonColorPicker(event,${ti},${ri},'${col.key}',${JSON.stringify(groupLabel)},this)"
-          title="Set cell color"></div>
+          onclick="event.stopPropagation();openMonColorPickerById(event,${ti},'${rowId}','${col.key}','${grpStr}',this)"
+          title="Right-click cell or click dot for color"></div>
       </div>
     </td>`;
   });
@@ -2626,22 +2802,19 @@ function renderSingleTable(wrap, tbl, ti) {
 
   // Context menu delegation
   secWrap.addEventListener('contextmenu', e => {
-    const td = e.target.closest('.mon-cell');
+    e.preventDefault();
     const nameTd = e.target.closest('.mon-name-cell');
     if(nameTd) {
-      e.preventDefault();
-      const tr = nameTd.closest('tr');
-      const allRows = [...tr.parentElement.rows];
-      const ri = allRows.indexOf(tr);
-      showMonRowMenu(e, ti, ri, null);
+      const {rowid, ti:tIdx, grp} = nameTd.dataset;
+      showMonRowMenuById(e, tIdx, rowid, grp);
       return;
     }
+    const td = e.target.closest('.mon-cell');
     if(!td) return;
-    e.preventDefault();
     const inp = td.querySelector('input');
-    const {ti:tIdx, ri:rIdx, key, grp} = td.dataset;
-    const rowObj = grp ? monSheet[tIdx].groups?.find(g=>g.label===grp)?.rows[rIdx] : monSheet[tIdx].rows[rIdx];
-    if(rowObj) showMonCellMenu(e, inp, rowObj, key, td);
+    const {ti:tIdx, rowid, key, grp} = td.dataset;
+    const rowObj = findMonRowById(parseInt(tIdx), rowid, grp);
+    if(rowObj) showMonCellMenuById(e, inp, rowObj, key, td, tIdx, rowid, grp);
   });
 
   wrap.appendChild(secWrap);
@@ -2680,13 +2853,19 @@ function renderGroupedTable(wrap, tbl, ti) {
     secWrap.appendChild(tblEl);
 
     secWrap.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      const nameTd = e.target.closest('.mon-name-cell');
+      if(nameTd) {
+        const {rowid, ti:tIdx, grp} = nameTd.dataset;
+        showMonRowMenuById(e, tIdx, rowid, grp);
+        return;
+      }
       const td = e.target.closest('.mon-cell');
       if(!td) return;
-      e.preventDefault();
       const inp = td.querySelector('input');
-      const {ti:tIdx, ri:rIdx, key, grp:grpLabel} = td.dataset;
-      const g = monSheet[tIdx].groups?.find(g=>g.label===grpLabel);
-      if(g) showMonCellMenu(e, inp, g.rows[rIdx], key, td);
+      const {ti:tIdx, rowid, key, grp} = td.dataset;
+      const rowObj = findMonRowById(parseInt(tIdx), rowid, grp);
+      if(rowObj) showMonCellMenuById(e, inp, rowObj, key, td, tIdx, rowid, grp);
     });
 
     wrap.appendChild(secWrap);
