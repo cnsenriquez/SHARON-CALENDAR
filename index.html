@@ -518,6 +518,18 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 .mon-legend-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; font-size: .72rem; }
 .mon-leg { display: flex; align-items: center; gap: 5px; color: var(--text2); }
 .mon-leg-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,.1); }
+
+/* ── Mon cell color picker ── */
+.mon-cell-wrap { position:relative; width:100%; height:100%; }
+.mon-cell-color-dot { position:absolute; bottom:3px; right:3px; width:10px; height:10px; border-radius:50%; border:1.5px solid rgba(0,0,0,.15); cursor:pointer; flex-shrink:0; z-index:1; }
+.mon-color-picker-pop { position:fixed; background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 8px 28px rgba(0,0,0,.15); z-index:9999; padding:8px; display:flex; flex-wrap:wrap; gap:6px; width:148px; }
+.mon-cp-swatch { width:22px; height:22px; border-radius:6px; cursor:pointer; border:2px solid transparent; transition:transform .1s; flex-shrink:0; }
+.mon-cp-swatch:hover { transform:scale(1.2); border-color:rgba(0,0,0,.2); }
+.mon-cp-clear { font-size:.65rem; width:100%; text-align:center; padding:4px; border-radius:6px; background:#f0f5f2; border:none; cursor:pointer; font-family:'Nunito',sans-serif; color:#5a8070; font-weight:700; }
+
+/* Mon cell custom colors */
+.mon-cell[style*="background"] .mon-cell-input { color: #222; }
+.mon-cell-color-dot { width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0; }
 </style>
 </head>
 <body>
@@ -806,7 +818,7 @@ function saveToFirestore() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(()=>{
     if (!window._fsReady || !window._fsSave) return;
-    window._fsSave({ userEvs, xlEvs, xlDone, drvData, etData, asData, etPass, asPass, notesData, updatedAt: new Date().toISOString() });
+    window._fsSave({ userEvs, xlEvs, xlDone, drvData, etData, asData, etPass, asPass, notesData, rfidExtraDates: window._rfidExtraDates||[], monSheet, updatedAt: new Date().toISOString() });
   }, 300);
 }
 
@@ -2315,34 +2327,111 @@ const MON_CELL_CLASSES = {
   'CANCELED':'canceled','N/A':'na','ASSUME':'assume','WRONG BILL':'unpaid','SOA':'pending'
 };
 
+let _monSaveTimer = null;
 function saveMonSheet() {
   saveData('sharon_monsheet', monSheet);
-  saveToFirestore();
+  // Debounce Firestore writes — avoid hitting rate limits
+  clearTimeout(_monSaveTimer);
+  _monSaveTimer = setTimeout(() => saveToFirestore(), 600);
 }
 
 // ── Context menu for quick cell status ──
 let _monMenuEl = null;
+// Color palette for custom cell colors
+const MON_CUSTOM_COLORS = [
+  '#c6e8d0','#fff3b0','#ffd0d0','#d0e8ff','#e8d0ff','#ffd8b0',
+  '#b0f0e0','#f0b0d0','#d8f0b0','#b0d8f0','#f0d8b0','#d0d0d0',
+  '#5a8070','#c8a000','#c83200','#1a4a8a','#6a2d8a','#e05800',
+  '#2c2c2c','#ffffff',
+];
+
 function showMonCellMenu(e, input, row, colKey, td) {
   if(_monMenuEl) _monMenuEl.remove();
+  const existing = row.cells[colKey];
+  const curColor = existing && typeof existing === 'object' ? existing.c : '';
+
   const menu = document.createElement('div');
-  menu.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:9999;padding:6px;min-width:140px;font-family:'Nunito',sans-serif;font-size:.78rem;`;
+  menu.style.cssText = `position:fixed;left:${Math.min(e.clientX, window.innerWidth-200)}px;top:${Math.min(e.clientY, window.innerHeight-320)}px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.18);z-index:9999;padding:8px;min-width:160px;font-family:'Nunito',sans-serif;font-size:.78rem;`;
+
+  // Status section label
+  const lbl1 = document.createElement('div');
+  lbl1.style.cssText = 'font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9aaa9a;padding:2px 8px 6px;';
+  lbl1.textContent = 'Quick Status';
+  menu.appendChild(lbl1);
+
   ['PAID','PENDING','UNPAID','CANCELED','N/A','ASSUME','WRONG BILL','SOA',''].forEach(status => {
     const c = MON_CELL_COLORS[status] || '#fafcfa';
     const item = document.createElement('div');
-    item.style.cssText = 'padding:6px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;';
-    item.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${c};border:1px solid rgba(0,0,0,.1);flex-shrink:0"></span>${status||'(clear)'}`;
+    item.style.cssText = 'padding:5px 10px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;';
+    item.innerHTML = `<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${c};border:1px solid rgba(0,0,0,.1);flex-shrink:0"></span>${status||'(clear text)'}`;
     item.onmouseenter = () => item.style.background = '#f0f5f2';
     item.onmouseleave = () => item.style.background = '';
     item.onclick = () => {
       if(input) input.value = status;
-      row.cells[colKey] = status;
+      const existingCell = row.cells[colKey];
+      const existColor = existingCell && typeof existingCell === 'object' ? existingCell.c : '';
+      row.cells[colKey] = existColor ? {v:status, c:existColor} : status;
       const cls = MON_CELL_CLASSES[status.toUpperCase()] || '';
       td.className = 'mon-cell' + (cls ? ' '+cls : '');
+      if(existColor) td.style.background = existColor;
+      if(input) input.dataset.orig = status;
       saveMonSheet();
       menu.remove(); _monMenuEl = null;
     };
     menu.appendChild(item);
   });
+
+  // Divider
+  const div = document.createElement('div');
+  div.style.cssText = 'border-top:1px solid #eee;margin:6px 0;';
+  menu.appendChild(div);
+
+  // Color section label
+  const lbl2 = document.createElement('div');
+  lbl2.style.cssText = 'font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9aaa9a;padding:2px 8px 6px;';
+  lbl2.textContent = 'Cell Color';
+  menu.appendChild(lbl2);
+
+  // Color swatches
+  const swatchWrap = document.createElement('div');
+  swatchWrap.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:0 6px 6px;';
+  MON_CUSTOM_COLORS.forEach(color => {
+    const sw = document.createElement('div');
+    sw.style.cssText = `width:22px;height:22px;border-radius:5px;background:${color};cursor:pointer;border:${curColor===color?'2.5px solid #3d5c4a':'1.5px solid rgba(0,0,0,.12)'};transition:transform .1s;`;
+    sw.title = color;
+    sw.onmouseenter = () => sw.style.transform = 'scale(1.2)';
+    sw.onmouseleave = () => sw.style.transform = '';
+    sw.onclick = () => {
+      // Get ti, ri from td dataset
+      const ti = parseInt(td.dataset.ti);
+      const ri = parseInt(td.dataset.ri);
+      const key = td.dataset.key;
+      const grp = td.dataset.grp || null;
+      monCellSetColor(ti, ri, key, grp, color);
+      menu.remove(); _monMenuEl = null;
+    };
+    swatchWrap.appendChild(sw);
+  });
+  menu.appendChild(swatchWrap);
+
+  // Clear color button
+  if(curColor) {
+    const clearColor = document.createElement('div');
+    clearColor.style.cssText = 'padding:5px 10px;border-radius:8px;cursor:pointer;font-size:.74rem;color:#c05050;text-align:center;';
+    clearColor.textContent = '✕ Remove color';
+    clearColor.onmouseenter = () => clearColor.style.background = '#fff0f0';
+    clearColor.onmouseleave = () => clearColor.style.background = '';
+    clearColor.onclick = () => {
+      const ti = parseInt(td.dataset.ti);
+      const ri = parseInt(td.dataset.ri);
+      const key = td.dataset.key;
+      const grp = td.dataset.grp || null;
+      monCellSetColor(ti, ri, key, grp, '');
+      menu.remove(); _monMenuEl = null;
+    };
+    menu.appendChild(clearColor);
+  }
+
   document.body.appendChild(menu);
   _monMenuEl = menu;
   setTimeout(() => document.addEventListener('click', () => { if(_monMenuEl){_monMenuEl.remove();_monMenuEl=null;} }, {once:true}), 10);
@@ -2463,24 +2552,39 @@ function buildColHeaders(tbl, cols) {
   return hdr1 + hdr2;
 }
 
+function getCellVal(raw) { return (typeof raw==='object' && raw!==null) ? (raw.value||'') : (raw||''); }
+function getCellColor(raw) { return (typeof raw==='object' && raw!==null) ? (raw.color||'') : ''; }
+
 function buildDataRow(row, cols, ti, ri, groupLabel) {
-  let cells = `<td class="mon-name-cell">
+  let cells = `<td class="mon-name-cell" title="Double-click to rename">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:3px">
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${esc(row.name)}">${esc(row.name)}</span>
-      <button onclick="deleteMonRow(${ti},${ri},${JSON.stringify(groupLabel)})" style="background:none;border:none;color:#b0b0b0;cursor:pointer;font-size:.62rem;padding:1px 3px;flex-shrink:0">✕</button>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;cursor:text"
+        ondblclick="renameMonRowInline(event,${ti},${ri},${JSON.stringify(groupLabel)})"
+        title="Double-click to rename">${esc(row.name)}</span>
+      <button onclick="deleteMonRow(${ti},${ri},${JSON.stringify(groupLabel)})" style="background:none;border:none;color:#b0b0b0;cursor:pointer;font-size:.62rem;padding:1px 3px;flex-shrink:0" title="Delete row">✕</button>
     </div>
   </td>`;
   cols.forEach(col => {
-    const val = (row.cells[col.key] || '');
+    const raw = row.cells[col.key];
+    const val = getCellVal(raw);
+    const bgColor = getCellColor(raw);
     const vUp = val.toUpperCase();
-    const cls = MON_CELL_CLASSES[vUp] || '';
-    cells += `<td class="mon-cell${cls?' '+cls:''}" data-ti="${ti}" data-ri="${ri}" data-key="${col.key}" data-grp="${groupLabel||''}">
-      <input type="text" class="mon-cell-input" value="${esc(val)}" placeholder=""
-        onfocus="this.select()"
-        onblur="monCellSave(this,${ti},${ri},'${col.key}',${JSON.stringify(groupLabel)})"
-        onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig||'';this.blur();}"
-        data-orig="${esc(val)}"
-      />
+    const cls = (!bgColor && MON_CELL_CLASSES[vUp]) ? MON_CELL_CLASSES[vUp] : '';
+    const bgStyle = bgColor ? `background:${bgColor}!important;` : '';
+    const dotStyle = bgColor ? `background:${bgColor};filter:brightness(.75)` : 'background:#d0d8d4';
+    cells += `<td class="mon-cell${cls?' '+cls:''}" data-ti="${ti}" data-ri="${ri}" data-key="${col.key}" data-grp="${groupLabel||''}" style="${bgStyle}">
+      <div class="mon-cell-wrap">
+        <input type="text" class="mon-cell-input" value="${esc(val)}" placeholder=""
+          onfocus="this.select()"
+          onblur="monCellSave(this,${ti},${ri},'${col.key}',${JSON.stringify(groupLabel)})"
+          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig||'';this.blur();}"
+          data-orig="${esc(val)}"
+          style="padding-right:16px"
+        />
+        <div class="mon-cell-color-dot" style="${dotStyle}"
+          onclick="event.stopPropagation();openMonColorPicker(event,${ti},${ri},'${col.key}',${JSON.stringify(groupLabel)},this)"
+          title="Set cell color"></div>
+      </div>
     </td>`;
   });
   return `<tr>${cells}</tr>`;
@@ -2523,6 +2627,15 @@ function renderSingleTable(wrap, tbl, ti) {
   // Context menu delegation
   secWrap.addEventListener('contextmenu', e => {
     const td = e.target.closest('.mon-cell');
+    const nameTd = e.target.closest('.mon-name-cell');
+    if(nameTd) {
+      e.preventDefault();
+      const tr = nameTd.closest('tr');
+      const allRows = [...tr.parentElement.rows];
+      const ri = allRows.indexOf(tr);
+      showMonRowMenu(e, ti, ri, null);
+      return;
+    }
     if(!td) return;
     e.preventDefault();
     const inp = td.querySelector('input');
@@ -2580,6 +2693,38 @@ function renderGroupedTable(wrap, tbl, ti) {
   });
 }
 
+
+function renameMonRowInline(e, ti, ri, grpLabel) {
+  const span = e.target;
+  const tbl = monSheet[ti];
+  let row;
+  if(grpLabel) {
+    const g = tbl.groups?.find(g=>g.label===grpLabel);
+    if(g) row = g.rows[ri];
+  } else { row = tbl.rows[ri]; }
+  if(!row) return;
+
+  const origName = row.name;
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.value = origName;
+  inp.style.cssText = 'width:100%;border:none;background:#fffbe6;outline:2px solid #c8a840;border-radius:4px;font-family:"Nunito",sans-serif;font-size:.78rem;font-weight:600;padding:2px 4px;';
+  span.replaceWith(inp);
+  inp.focus(); inp.select();
+
+  const commit = () => {
+    const newName = inp.value.trim() || origName;
+    row.name = newName;
+    saveMonSheet();
+    renderMonSpreadsheet();
+  };
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', e => {
+    if(e.key === 'Enter') inp.blur();
+    if(e.key === 'Escape') { inp.value = origName; inp.blur(); }
+  });
+}
+
 function monCellSave(inp, ti, ri, key, grpLabel) {
   const v = inp.value.trim();
   const tbl = monSheet[ti];
@@ -2591,15 +2736,131 @@ function monCellSave(inp, ti, ri, key, grpLabel) {
     row = tbl.rows[ri];
   }
   if(!row) return;
-  row.cells[key] = v;
+  // Preserve existing color if any
+  const existing = row.cells[key];
+  const existingColor = getCellColor(existing);
+  row.cells[key] = existingColor ? {value:v, color:existingColor} : v;
   const vUp = v.toUpperCase();
-  const td = inp.parentElement;
-  const cls = MON_CELL_CLASSES[vUp] || '';
-  td.className = 'mon-cell' + (cls?' '+cls:'');
+  const td = inp.closest('.mon-cell');
+  if(td) {
+    const cls = (!existingColor && MON_CELL_CLASSES[vUp]) ? MON_CELL_CLASSES[vUp] : '';
+    td.className = 'mon-cell' + (cls?' '+cls:'');
+    if(existingColor) td.style.background = existingColor;
+  }
   inp.dataset.orig = v;
   saveMonSheet();
 }
 
+
+// ── Mon cell color picker ──
+const MON_CELL_PALETTE = [
+  '#c6e8d0','#a8d8b0','#6abf80',  // greens
+  '#fff3b0','#ffe080','#ffc840',  // yellows
+  '#ffd0d0','#ffb0b0','#ff8080',  // reds
+  '#d0e8ff','#a8ccf0','#7ab0e0',  // blues
+  '#e8d0f8','#d0b0f0','#b080e0',  // purples
+  '#ffe8c0','#ffd090','#ffb850',  // oranges
+  '#d0f0f0','#a0e0e0','#60c0c0',  // teals
+  '#2c2c2c','#e0e0e0','#ffffff',  // dark/gray/white
+];
+
+let _monCpEl = null;
+
+let _monRowMenuEl = null;
+function showMonRowMenu(e, ti, ri, grpLabel) {
+  if(_monRowMenuEl) _monRowMenuEl.remove();
+  const menu = document.createElement('div');
+  menu.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:9999;padding:6px;min-width:150px;font-family:'Nunito',sans-serif;font-size:.8rem;`;
+
+  const items = [
+    {icon:'✏️', label:'Rename row', action: () => {
+      const tbl = monSheet[ti];
+      let row = grpLabel ? tbl.groups?.find(g=>g.label===grpLabel)?.rows[ri] : tbl.rows[ri];
+      if(!row) return;
+      const n = prompt('Rename:', row.name);
+      if(n && n.trim()) { row.name = n.trim(); saveMonSheet(); renderMonSpreadsheet(); }
+    }},
+    {icon:'🗑', label:'Delete row', action: () => deleteMonRow(ti, ri, grpLabel), danger:true},
+  ];
+
+  items.forEach(item => {
+    const div = document.createElement('div');
+    div.style.cssText = `padding:8px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;color:${item.danger?'#c03030':'#2c3830'};`;
+    div.innerHTML = `${item.icon} ${item.label}`;
+    div.onmouseenter = () => div.style.background = item.danger?'#ffeaea':'#f0f5f2';
+    div.onmouseleave = () => div.style.background = '';
+    div.onclick = () => { menu.remove(); _monRowMenuEl=null; item.action(); };
+    menu.appendChild(div);
+  });
+
+  document.body.appendChild(menu);
+  _monRowMenuEl = menu;
+  setTimeout(()=>document.addEventListener('click',()=>{if(_monRowMenuEl){_monRowMenuEl.remove();_monRowMenuEl=null;}},{once:true}),10);
+}
+
+function openMonColorPicker(e, ti, ri, key, grpLabel, dotEl) {
+  if(_monCpEl) { _monCpEl.remove(); _monCpEl=null; }
+  const pop = document.createElement('div');
+  pop.className = 'mon-color-picker-pop';
+
+  MON_CELL_PALETTE.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'mon-cp-swatch';
+    sw.style.background = c;
+    if(c==='#ffffff') sw.style.border = '2px solid #ddd';
+    sw.onclick = () => {
+      setMonCellColor(ti, ri, key, grpLabel, c, dotEl);
+      pop.remove(); _monCpEl=null;
+    };
+    pop.appendChild(sw);
+  });
+
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'mon-cp-clear';
+  clearBtn.textContent = '✕ Clear color';
+  clearBtn.onclick = () => {
+    setMonCellColor(ti, ri, key, grpLabel, '', dotEl);
+    pop.remove(); _monCpEl=null;
+  };
+  pop.appendChild(clearBtn);
+
+  const rect = dotEl.getBoundingClientRect();
+  pop.style.left = Math.min(rect.left, window.innerWidth-160)+'px';
+  pop.style.top = (rect.bottom+4)+'px';
+  document.body.appendChild(pop);
+  _monCpEl = pop;
+  setTimeout(()=>document.addEventListener('click', ()=>{ if(_monCpEl){_monCpEl.remove();_monCpEl=null;} },{once:true}),10);
+}
+
+function setMonCellColor(ti, ri, key, grpLabel, color, dotEl) {
+  const tbl = monSheet[ti];
+  let row;
+  if(grpLabel) {
+    const g = tbl.groups?.find(g=>g.label===grpLabel);
+    if(g) row = g.rows[ri];
+  } else { row = tbl.rows[ri]; }
+  if(!row) return;
+
+  const existing = row.cells[key];
+  const val = getCellVal(existing);
+  row.cells[key] = color ? {value:val, color:color} : val;
+
+  // Update DOM
+  const td = dotEl?.closest('.mon-cell');
+  if(td) {
+    if(color) {
+      td.style.background = color;
+      td.className = 'mon-cell'; // remove status class
+    } else {
+      td.style.background = '';
+      const vUp = val.toUpperCase();
+      const cls = MON_CELL_CLASSES[vUp] || '';
+      td.className = 'mon-cell' + (cls?' '+cls:'');
+    }
+    if(dotEl) dotEl.style.cssText = color ? ('background:'+color) : 'background:#d0d8d4';
+  }
+  saveMonSheet();
+}
 function addMonRow(ti, grpLabel) {
   const name = prompt('Row name:');
   if(!name) return;
@@ -3102,6 +3363,8 @@ window._fbInit = function(loadFn, saveFn) {
       saveData('sharon_etpass', etPass);
       saveData('sharon_aspass', asPass);
       saveData('sharon_notes', notesData);
+      saveData('sharon_rfid_dates', window._rfidExtraDates||[]);
+      saveData('sharon_monsheet', monSheet);
     }
     renderCalendar(); renderSummary();
   }).catch(e => {
