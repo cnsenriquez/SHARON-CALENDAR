@@ -623,6 +623,8 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
         <button class="add-btn" onclick="openAddDayModal()">＋ Add Day</button>
       </div>
     </div>
+    <!-- MMDA Coding Banner -->
+    <div id="drvCodingBanner" style="background:#fff;border:1.5px solid var(--border);border-radius:14px;padding:12px 16px;margin-bottom:14px;box-shadow:0 2px 8px var(--sh)"></div>
     <div class="drv-sort-note" style="margin-bottom:10px;margin-left:2px">Latest first · Click a day to expand</div>
     <div class="drv-cards" id="drvCards"></div>
     <div style="text-align:center;padding:28px 16px 20px;margin-top:16px;border-top:1px dashed var(--border);">
@@ -1360,7 +1362,47 @@ function toggleXlDone(key,e){
 // drvOpenDates = set of dates currently expanded
 const drvOpenDates = new Set();
 
+
+// ─── MMDA Number Coding ───
+const MMDA_CODING = {
+  1: 'Monday', 2: 'Monday',
+  3: 'Tuesday', 4: 'Tuesday',
+  5: 'Wednesday', 6: 'Wednesday',
+  7: 'Thursday', 8: 'Thursday',
+  9: 'Friday', 0: 'Friday',
+};
+const CODING_PLATES = {
+  'NJK 1379': { car: 'Grandia',        lastDigit: 9 },
+  'NIU 4271': { car: 'Ford Territory',  lastDigit: 1 },
+  'NIC 5906': { car: 'Red Innova',      lastDigit: 6 },
+  'NIJ 5047': { car: 'Isuzu Pick Up',   lastDigit: 7 },
+};
+
+function renderCodingBanner() {
+  const el = document.getElementById('drvCodingBanner');
+  if(!el) return;
+  const today = new Date();
+  const todayDow = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][today.getDay()];
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate()+1);
+  const tomorrowDow = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][tomorrow.getDay()];
+
+  const todayPlates = Object.entries(CODING_PLATES).filter(([p,v]) => MMDA_CODING[v.lastDigit] === todayDow);
+  const tomorrowPlates = Object.entries(CODING_PLATES).filter(([p,v]) => MMDA_CODING[v.lastDigit] === tomorrowDow);
+
+  let html = `<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start">`;
+  const mkChips = (plates, label, badgeColor) => {
+    if(!plates.length) return `<div style="flex:1;min-width:180px"><div style="font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${badgeColor};margin-bottom:4px">${label}</div><div style="font-size:.72rem;color:var(--muted);font-style:italic">No coding</div></div>`;
+    const chips = plates.map(([plate,v]) => `<span style="display:inline-flex;align-items:center;gap:4px;background:${badgeColor}22;border:1px solid ${badgeColor}55;border-radius:8px;padding:3px 8px;font-size:.72rem;font-weight:700;color:${badgeColor}"><span>🚗</span>${plate} <span style="font-weight:400;color:var(--text2)">${v.car}</span></span>`).join(' ');
+    return `<div style="flex:1;min-width:180px"><div style="font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:${badgeColor};margin-bottom:5px">${label} — ${plates[0]?MMDA_CODING[plates[0][1].lastDigit]:''}</div><div style="display:flex;flex-wrap:wrap;gap:5px">${chips}</div></div>`;
+  };
+  html += mkChips(todayPlates, '🚫 Coding Today', '#c83200');
+  html += mkChips(tomorrowPlates, '⚠️ Coding Tomorrow', '#c8a000');
+  html += '</div>';
+  el.innerHTML = html;
+}
+
 function renderDrivers() {
+  renderCodingBanner();
   const c=document.getElementById('drvCards'); c.innerHTML='';
   const grouped={};
   drvData.forEach((d,i)=>{if(!grouped[d.date])grouped[d.date]=[];grouped[d.date].push({...d,_i:i});});
@@ -1378,10 +1420,18 @@ function renderDrivers() {
     const entries=grouped[date];
     const card=document.createElement('div'); card.className='drv-card';
 
+    // Today / Tomorrow label
+    const todayKey2 = todayKey();
+    const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate()+1);
+    const tomorrowKey2 = tomorrowD.toISOString().slice(0,10);
+    let dayLabel = '';
+    if(date === todayKey2) dayLabel = '<span style="display:inline-block;background:#5a8070;color:#fff;font-size:.6rem;font-weight:800;padding:1px 7px;border-radius:8px;letter-spacing:.06em;text-transform:uppercase;margin-left:8px">TODAY</span>';
+    else if(date === tomorrowKey2) dayLabel = '<span style="display:inline-block;background:#c8a000;color:#fff;font-size:.6rem;font-weight:800;padding:1px 7px;border-radius:8px;letter-spacing:.06em;text-transform:uppercase;margin-left:8px">TOMORROW</span>';
+
     const hdr=document.createElement('div'); hdr.className='drv-date-hdr';
     hdr.innerHTML=`
       <div>
-        <div class="drv-date-lbl">${DAYS_F[dow]}, ${MONTHS[m-1]} ${dd}, ${y}</div>
+        <div class="drv-date-lbl">${DAYS_F[dow]}, ${MONTHS[m-1]} ${dd}, ${y}${dayLabel}</div>
         <div style="font-size:.66rem;color:var(--muted);margin-top:1px">${entries.length} driver${entries.length!==1?'s':''}</div>
       </div>
       <div class="drv-date-ctrl">
@@ -1454,9 +1504,20 @@ function updateDrvModalTitle(){
   if(d){
     const [y,m,dd]=d.split('-').map(Number);
     const dow=new Date(y,m-1,dd).getDay();
-    document.getElementById('drvMSub').textContent=DAYS_F[dow]+', '+MONTHS[m-1]+' '+dd+', '+y;
+    const todayStr = todayKey();
+    const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate()+1);
+    const tomorrowStr = tomorrowD.toISOString().slice(0,10);
+
+    let badge = '';
+    if(d === todayStr) badge = ' <span style="display:inline-block;background:#5a8070;color:#fff;font-size:.58rem;font-weight:800;padding:1px 8px;border-radius:8px;letter-spacing:.07em;text-transform:uppercase;vertical-align:middle">TODAY</span>';
+    else if(d === tomorrowStr) badge = ' <span style="display:inline-block;background:#c8a000;color:#fff;font-size:.58rem;font-weight:800;padding:1px 8px;border-radius:8px;letter-spacing:.07em;text-transform:uppercase;vertical-align:middle">TOMORROW&#39;S SCHEDULE</span>';
+
+    document.getElementById('drvMSub').innerHTML = DAYS_F[dow]+', '+MONTHS[m-1]+' '+dd+', '+y + badge;
+
+    // Re-check coding for all car inputs
+    document.querySelectorAll('.dp-car').forEach(checkCarCoding);
   } else {
-    document.getElementById('drvMSub').textContent='';
+    document.getElementById('drvMSub').innerHTML='';
   }
 }
 
@@ -1475,11 +1536,59 @@ function addDrvPerson(driver='', car='', errand=''){
       <input type="text" class="dp-name" list="driverNameList" placeholder="Select or type name…" value="${esc(driver)}" autocomplete="off"/>
     </div>
     <div class="frow"><label>Car / Vehicle</label>
-      <input type="text" class="dp-car" list="driverCarList" placeholder="Select or type car…" value="${esc(car)}" autocomplete="off"/>
+      <input type="text" class="dp-car" list="driverCarList" placeholder="Select or type car…" value="${esc(car)}" autocomplete="off"
+        oninput="checkCarCoding(this)" onchange="checkCarCoding(this)"/>
+      <div class="dp-car-coding" style="display:none;margin-top:4px;font-size:.72rem;font-weight:700;color:#c83200;background:#fff0f0;border:1px solid #f5c0c0;border-radius:8px;padding:4px 10px"></div>
     </div>
     <div class="frow drv-person-errand"><label>Errand / Schedule</label><textarea class="dp-errand" placeholder="Details of assignment…" style="min-height:64px">${esc(errand)}</textarea></div>`;
   list.appendChild(div);
   if(driver==='') setTimeout(()=>div.querySelector('.dp-name').focus(),60);
+}
+
+
+// ── Car coding check in driver modal ──
+const PLATE_BY_CAR = {
+  'grandia':         { plate:'NJK 1379', lastDigit:9 },
+  'ford territory':  { plate:'NIU 4271', lastDigit:1 },
+  'red innova':      { plate:'NIC 5906', lastDigit:6 },
+  'isuzu pick up':   { plate:'NIJ 5047', lastDigit:7 },
+};
+const CODING_DAYS_BY_DIGIT = {
+  1:'Monday', 2:'Monday', 3:'Tuesday', 4:'Tuesday',
+  5:'Wednesday', 6:'Wednesday', 7:'Thursday', 8:'Thursday',
+  9:'Friday', 0:'Friday'
+};
+
+function checkCarCoding(inp) {
+  const warning = inp.parentElement.querySelector('.dp-car-coding');
+  if(!warning) return;
+  const val = inp.value.trim().toLowerCase();
+  const match = Object.entries(PLATE_BY_CAR).find(([k]) => val.includes(k));
+  if(!match) { warning.style.display='none'; return; }
+  const [, info] = match;
+  const codingDay = CODING_DAYS_BY_DIGIT[info.lastDigit];
+  // Get selected date
+  const dateInp = document.getElementById('drvDateInput');
+  const dateVal = dateInp ? dateInp.value : '';
+  let selectedDow = '';
+  if(dateVal) {
+    const [y,m,d] = dateVal.split('-').map(Number);
+    const dow = new Date(y,m-1,d).getDay();
+    selectedDow = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dow];
+  }
+  if(selectedDow === codingDay) {
+    warning.textContent = '🚫 CODING! ' + info.plate + ' is restricted on ' + codingDay + 's';
+    warning.style.display = 'block';
+    warning.style.color = '#c83200';
+    warning.style.background = '#fff0f0';
+    warning.style.borderColor = '#f5c0c0';
+  } else {
+    warning.textContent = 'ℹ️ ' + info.plate + ' coding day: ' + codingDay;
+    warning.style.display = 'block';
+    warning.style.color = '#7a6a2a';
+    warning.style.background = '#fffbe6';
+    warning.style.borderColor = '#e8d080';
+  }
 }
 
 function removeDrvPerson(id){
@@ -2084,6 +2193,7 @@ function renderNotes() {
         </div>
       </div>
       <div class="note-card-body">${esc(note.body||'').replace(/\n/g,'<br>')}</div>
+      ${note.image ? `<div style="margin-top:8px"><img src="${note.image}" onclick="openImgLightbox('${note.id}')" style="max-width:100%;border-radius:8px;border:1px solid rgba(0,0,0,.08);object-fit:contain;max-height:220px;display:block;cursor:zoom-in" title="Click to view full size"/></div>` : ''}
       <div class="note-card-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}) : ''}</div>
     `;
     grid.appendChild(div);
@@ -2093,12 +2203,42 @@ function renderNotes() {
   }
 }
 
+function previewNoteImg(inp) {
+  if(!inp.files || !inp.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('noteImgPreviewEl').src = e.target.result;
+    document.getElementById('noteImgPreview').style.display = 'block';
+    window._noteImgData = e.target.result;
+  };
+  reader.readAsDataURL(inp.files[0]);
+}
+
+function clearNoteImg() {
+  document.getElementById('noteImgPreview').style.display = 'none';
+  document.getElementById('noteImgPreviewEl').src = '';
+  document.getElementById('noteImgInput').value = '';
+  window._noteImgData = null;
+}
+
 function openNoteModal(id) {
   noteEditId = id;
   const note = id ? notesData.find(n => n.id === id) : null;
   document.getElementById('noteMHead').innerHTML = note ? 'Edit <em>Note</em>' : 'New <em>Note</em>';
   document.getElementById('noteTitleInput').value = note ? note.title : '';
   document.getElementById('noteBodyInput').value = note ? note.body : '';
+  // Load image if note has one
+  window._noteImgData = note?.image || null;
+  const prevEl = document.getElementById('noteImgPreview');
+  const prevImg = document.getElementById('noteImgPreviewEl');
+  if(note?.image) {
+    prevImg.src = note.image;
+    prevEl.style.display = 'block';
+  } else {
+    prevImg.src = '';
+    prevEl.style.display = 'none';
+  }
+  document.getElementById('noteImgInput').value = '';
   document.getElementById('noteColorInput').value = note ? (note.color || '#fffef5') : '#fffef5';
   document.getElementById('noteModalBg').classList.add('open');
   setTimeout(() => document.getElementById('noteTitleInput').focus(), 60);
@@ -2110,13 +2250,14 @@ function closeNoteModal() {
 function saveNote() {
   const title = document.getElementById('noteTitleInput').value.trim();
   const body = document.getElementById('noteBodyInput').value.trim();
+  const image = window._noteImgData || null;
   const color = document.getElementById('noteColorInput').value;
   if (!title && !body) { alert('Write something first.'); return; }
   if (noteEditId) {
     const n = notesData.find(n => n.id === noteEditId);
     if (n) { n.title = title; n.body = body; n.color = color; }
   } else {
-    notesData.unshift({ id: 'n' + Date.now(), title, body, color, pinned: false, createdAt: new Date().toISOString() });
+    notesData.unshift({ id: 'n' + Date.now(), title, body, color, image, pinned: false, createdAt: new Date().toISOString() });
   }
   saveAll(); closeNoteModal(); renderNotes();
 }
@@ -2439,8 +2580,41 @@ function showMonCellMenu(e, input, row, colKey, td) {
 
 // Section modal (kept for + Add Table future use)
 let _monSecModal_editIdx = null;
-function openMonSectionModal(si) { _monSecModal_editIdx = si; }
-function saveMonSection() {}
+function openMonSectionModal(si) {
+  _monSecModal_editIdx = si;
+  const isEdit = si !== null;
+  const sec = isEdit ? monSheet[si] : null;
+  document.getElementById('monSecLabelInp').value = sec ? sec.label || sec.title || '' : '';
+  document.getElementById('monSecColorInp').value = sec ? sec.color : '#3d5c4a';
+  document.getElementById('monSecTypeRow').style.display = isEdit ? 'none' : '';
+  document.getElementById('monSecModalBg').classList.add('open');
+  setTimeout(() => document.getElementById('monSecLabelInp').focus(), 60);
+}
+
+function saveMonSection() {
+  const label = document.getElementById('monSecLabelInp').value.trim();
+  if(!label) { alert('Please enter a section name.'); return; }
+  const color = document.getElementById('monSecColorInp').value || '#3d5c4a';
+  const type = document.getElementById('monSecTypeInp')?.value || 'monthly';
+
+  if(_monSecModal_editIdx !== null) {
+    const sec = monSheet[_monSecModal_editIdx];
+    sec.label = label; sec.title = label; sec.color = color;
+  } else {
+    const newTable = {
+      id: 'ms' + Date.now(),
+      title: label, label: label,
+      type: type,
+      color: color,
+      rows: []
+    };
+    // monthly_grouped needs groups array
+    if(type === 'monthly_grouped') newTable.groups = [];
+    monSheet.push(newTable);
+  }
+  document.getElementById('monSecModalBg').classList.remove('open');
+  saveMonSheet(); renderMonSpreadsheet();
+}
 function deleteMonSection(si) {
   if(!confirm('Delete?')) return;
   monSheet.splice(si,1);
@@ -3340,14 +3514,45 @@ function getDrvScheduleText(dateKey) {
   const dow = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dateObj.getDay()];
   const moName = ['January','February','March','April','May','June','July','August','September','October','November','December'][mo-1];
 
+  // Coding lookup
+  const CAR_PLATE_MAP = {
+    'grandia':        { plate:'NJK 1379', lastDigit:9 },
+    'ford territory': { plate:'NIU 4271', lastDigit:1 },
+    'red innova':     { plate:'NIC 5906', lastDigit:6 },
+    'isuzu pick up':  { plate:'NIJ 5047', lastDigit:7 },
+  };
+  const CODING_DAY_MAP = {1:'Monday',2:'Monday',3:'Tuesday',4:'Tuesday',5:'Wednesday',6:'Wednesday',7:'Thursday',8:'Thursday',9:'Friday',0:'Friday'};
+  const selectedDow = dow;
+
+  function getCodingWarning(carName) {
+    if(!carName) return '';
+    const key = carName.trim().toLowerCase();
+    const match = Object.entries(CAR_PLATE_MAP).find(([k]) => key.includes(k));
+    if(!match) return '';
+    const [,info] = match;
+    const codingDay = CODING_DAY_MAP[info.lastDigit];
+    if(codingDay === selectedDow) return ' 🚫 CODING (' + info.plate + ')';
+    return '';
+  }
+
+  // Label on top
+  const todayStr2 = new Date().toISOString().slice(0,10);
+  const tomorrowD2 = new Date(); tomorrowD2.setDate(tomorrowD2.getDate()+1);
+  const tomorrowStr2 = tomorrowD2.toISOString().slice(0,10);
+
   let lines = [];
+  if(dateKey === tomorrowStr2) lines.push("Tomorrow's Schedule");
+  else if(dateKey === todayStr2) lines.push("Today's Schedule");
+
   lines.push(`${dow}, ${moName} ${day}, ${y}`);
   lines.push('');
   (byDate[dateKey]||[]).forEach(r => {
-    lines.push(`🚗 ${r.driver}${r.car ? ' — ' + r.car : ''}`);
+    const codingWarn = getCodingWarning(r.car);
+    lines.push(`🚗 ${r.driver}${r.car ? ' — ' + r.car : ''}${codingWarn}`);
     if(r.errand) r.errand.split('\n').forEach(l => { if(l.trim()) lines.push('   ' + l.trim()); });
     lines.push('');
   });
+  // Verse at the bottom
   lines.push('Pray po palagi at ingat po. 🙏');
   lines.push('"The LORD will keep you from all harm—');
   lines.push(' He will watch over your life."');
@@ -3492,12 +3697,39 @@ function confirmPrintDrv() {
     </div>
   </div>
 </div>
+
+<!-- IMAGE LIGHTBOX -->
+<div id="imgLightboxBg" onclick="closeImgLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;padding:20px">
+  <img id="imgLightboxEl" style="max-width:95vw;max-height:92vh;border-radius:12px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,.5)"/>
+  <button onclick="closeImgLightbox()" style="position:fixed;top:16px;right:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1.4rem;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">✕</button>
+</div>
 </body></html>`;
 
   const win = window.open('','_blank','width=800,height=900');
   win.document.write(printHTML);
   win.document.close();
   win.onload = () => { win.focus(); win.print(); };
+}
+
+
+function openImgLightbox(noteId) {
+  const note = notesData.find(n => n.id === noteId);
+  if(!note || !note.image) return;
+  const bg = document.getElementById('imgLightboxBg');
+  const img = document.getElementById('imgLightboxEl');
+  img.src = note.image;
+  bg.style.display = 'flex';
+  document.addEventListener('keydown', _lightboxKeyClose);
+}
+
+function closeImgLightbox() {
+  document.getElementById('imgLightboxBg').style.display = 'none';
+  document.getElementById('imgLightboxEl').src = '';
+  document.removeEventListener('keydown', _lightboxKeyClose);
+}
+
+function _lightboxKeyClose(e) {
+  if(e.key === 'Escape') closeImgLightbox();
 }
 
 // ═══════════════════ INIT ═══════════════════
@@ -3693,6 +3925,17 @@ if (window._pendingInit) { window._fbInit(window._pendingInit.load, window._pend
         <button onclick="document.getElementById('noteColorInput').value='#f3e5f5'" style="width:22px;height:22px;border-radius:50%;background:#f3e5f5;border:1px solid #ccc;cursor:pointer"></button>
       </div>
     </div>
+    <div class="frow">
+      <label>📷 Insert Image <span style="font-size:.68rem;color:var(--muted)">(optional)</span></label>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input type="file" id="noteImgInput" accept="image/*" style="font-size:.8rem"
+          onchange="previewNoteImg(this)"/>
+        <div id="noteImgPreview" style="display:none;position:relative;max-width:100%">
+          <img id="noteImgPreviewEl" style="max-width:100%;max-height:160px;border-radius:10px;border:1px solid var(--border);object-fit:contain"/>
+          <button onclick="clearNoteImg()" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:.75rem">✕</button>
+        </div>
+      </div>
+    </div>
     <div class="modal-btns">
       <button class="cancel-btn" onclick="closeNoteModal()">Cancel</button>
       <button class="save-btn" onclick="saveNote()">Save Note</button>
@@ -3755,6 +3998,15 @@ if (window._pendingInit) { window._fbInit(window._pendingInit.load, window._pend
         </div>
       </div>
     </div>
+    <div class="frow" id="monSecTypeRow">
+      <label>Column Type</label>
+      <select id="monSecTypeInp" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:.82rem;background:#fff;color:var(--text)">
+        <option value="monthly">Monthly (Jan–Dec)</option>
+        <option value="quarterly">Quarterly (Jan-Mar, Apr-Jun…)</option>
+        <option value="bimonthly">Bi-monthly (15 & 30 per month)</option>
+        <option value="weekly">Weekly (date ranges)</option>
+      </select>
+    </div>
     <div class="modal-btns">
       <button class="cancel-btn" onclick="document.getElementById('monSecModalBg').classList.remove('open')">Cancel</button>
       <button class="save-btn" onclick="saveMonSection()">Save Section ✦</button>
@@ -3773,6 +4025,12 @@ if (window._pendingInit) { window._fbInit(window._pendingInit.load, window._pend
       <button class="save-btn" id="drvPickerConfirmBtn" onclick="confirmPrintDrv()">📋 Copy ✦</button>
     </div>
   </div>
+</div>
+
+<!-- IMAGE LIGHTBOX -->
+<div id="imgLightboxBg" onclick="closeImgLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;padding:20px">
+  <img id="imgLightboxEl" style="max-width:95vw;max-height:92vh;border-radius:12px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,.5)"/>
+  <button onclick="closeImgLightbox()" style="position:fixed;top:16px;right:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1.4rem;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">✕</button>
 </div>
 </body>
 </html>
