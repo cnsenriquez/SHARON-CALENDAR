@@ -890,7 +890,11 @@ function switchTab(name, btn) {
   document.getElementById('tab-'+name).classList.add('active');
   if(name==='summary') renderSummary();
   if(name==='drivers') renderDrivers();
-  if(name==='rfid') renderRfidSpreadsheet();
+  if(name==='rfid') {
+    const rfidWrap = document.getElementById('rfidSpreadsheet');
+    if(!rfidWrap || rfidWrap.innerHTML.trim() === '') renderRfidSpreadsheet();
+    // else: already rendered, don't re-render (prevents swap bug on tab switch)
+  }
   if(name==='monitoring') { renderMonitoring(); renderMonSpreadsheet(); }
   if(name==='notes') renderNotes();
 }
@@ -2193,7 +2197,7 @@ function renderNotes() {
         </div>
       </div>
       <div class="note-card-body">${esc(note.body||'').replace(/\n/g,'<br>')}</div>
-      ${note.image ? `<div style="margin-top:8px"><img src="${note.image}" onclick="openImgLightbox('${note.id}')" style="max-width:100%;border-radius:8px;border:1px solid rgba(0,0,0,.08);object-fit:contain;max-height:220px;display:block;cursor:zoom-in" title="Click to view full size"/></div>` : ''}
+      ${renderNoteImgs(note)}
       <div class="note-card-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}) : ''}</div>
     `;
     grid.appendChild(div);
@@ -2203,22 +2207,65 @@ function renderNotes() {
   }
 }
 
-function previewNoteImg(inp) {
+// ── Note multi-image handling ──
+window._noteImages = []; // array of base64 strings
+
+function addNoteImgSlot(existingBase64) {
+  const wrap = document.getElementById('noteImgsWrap');
+  if(!wrap) return;
+  const idx = wrap.children.length;
+  const slot = document.createElement('div');
+  slot.style.cssText = 'position:relative;display:flex;flex-direction:column;gap:6px';
+  slot.dataset.idx = idx;
+
+  if(existingBase64) {
+    // Show existing image
+    window._noteImages[idx] = existingBase64;
+    slot.innerHTML = `
+      <div style="position:relative;max-width:100%">
+        <img src="${existingBase64}" style="max-width:100%;max-height:160px;border-radius:10px;border:1px solid var(--border);object-fit:contain;display:block"/>
+        <button type="button" onclick="removeNoteImg(${idx},this)" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>`;
+  } else {
+    slot.innerHTML = `
+      <input type="file" accept="image/*" style="font-size:.8rem"
+        onchange="loadNoteImg(this,${idx})"/>`;
+  }
+  wrap.appendChild(slot);
+}
+
+function loadNoteImg(inp, idx) {
   if(!inp.files || !inp.files[0]) return;
   const reader = new FileReader();
   reader.onload = e => {
-    document.getElementById('noteImgPreviewEl').src = e.target.result;
-    document.getElementById('noteImgPreview').style.display = 'block';
-    window._noteImgData = e.target.result;
+    window._noteImages[idx] = e.target.result;
+    const slot = inp.closest('[data-idx]');
+    if(slot) {
+      slot.innerHTML = `
+        <div style="position:relative;max-width:100%">
+          <img src="${e.target.result}" style="max-width:100%;max-height:160px;border-radius:10px;border:1px solid var(--border);object-fit:contain;display:block"/>
+          <button type="button" onclick="removeNoteImg(${idx},this)" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.75rem;display:flex;align-items:center;justify-content:center">✕</button>
+        </div>`;
+    }
   };
   reader.readAsDataURL(inp.files[0]);
 }
 
-function clearNoteImg() {
-  document.getElementById('noteImgPreview').style.display = 'none';
-  document.getElementById('noteImgPreviewEl').src = '';
-  document.getElementById('noteImgInput').value = '';
-  window._noteImgData = null;
+function removeNoteImg(idx, btn) {
+  window._noteImages[idx] = null;
+  const slot = btn.closest('[data-idx]');
+  if(slot) slot.remove();
+}
+
+function initNoteImgs(images) {
+  window._noteImages = [];
+  const wrap = document.getElementById('noteImgsWrap');
+  if(wrap) wrap.innerHTML = '';
+  (images || []).forEach(img => { if(img) addNoteImgSlot(img); });
+}
+
+function getNoteImgsFromModal() {
+  return (window._noteImages || []).filter(Boolean);
 }
 
 function openNoteModal(id) {
@@ -2227,18 +2274,9 @@ function openNoteModal(id) {
   document.getElementById('noteMHead').innerHTML = note ? 'Edit <em>Note</em>' : 'New <em>Note</em>';
   document.getElementById('noteTitleInput').value = note ? note.title : '';
   document.getElementById('noteBodyInput').value = note ? note.body : '';
-  // Load image if note has one
-  window._noteImgData = note?.image || null;
-  const prevEl = document.getElementById('noteImgPreview');
-  const prevImg = document.getElementById('noteImgPreviewEl');
-  if(note?.image) {
-    prevImg.src = note.image;
-    prevEl.style.display = 'block';
-  } else {
-    prevImg.src = '';
-    prevEl.style.display = 'none';
-  }
-  document.getElementById('noteImgInput').value = '';
+  // Load images array (supports legacy single image too)
+  const existingImgs = note?.images || (note?.image ? [note.image] : []);
+  initNoteImgs(existingImgs);
   document.getElementById('noteColorInput').value = note ? (note.color || '#fffef5') : '#fffef5';
   document.getElementById('noteModalBg').classList.add('open');
   setTimeout(() => document.getElementById('noteTitleInput').focus(), 60);
@@ -2250,14 +2288,14 @@ function closeNoteModal() {
 function saveNote() {
   const title = document.getElementById('noteTitleInput').value.trim();
   const body = document.getElementById('noteBodyInput').value.trim();
-  const image = window._noteImgData || null;
+  const images = getNoteImgsFromModal();
   const color = document.getElementById('noteColorInput').value;
   if (!title && !body) { alert('Write something first.'); return; }
   if (noteEditId) {
     const n = notesData.find(n => n.id === noteEditId);
-    if (n) { n.title = title; n.body = body; n.color = color; }
+    if (n) { n.title = title; n.body = body; n.color = color; n.images = images; delete n.image; }
   } else {
-    notesData.unshift({ id: 'n' + Date.now(), title, body, color, image, pinned: false, createdAt: new Date().toISOString() });
+    notesData.unshift({ id: 'n' + Date.now(), title, body, color, images, pinned: false, createdAt: new Date().toISOString() });
   }
   saveAll(); closeNoteModal(); renderNotes();
 }
@@ -3712,12 +3750,28 @@ function confirmPrintDrv() {
 }
 
 
-function openImgLightbox(noteId) {
-  const note = notesData.find(n => n.id === noteId);
-  if(!note || !note.image) return;
-  const bg = document.getElementById('imgLightboxBg');
-  const img = document.getElementById('imgLightboxEl');
-  img.src = note.image;
+
+function renderNoteImgs(note) {
+  var imgs = note.images || (note.image ? [note.image] : []);
+  if(!imgs.length) return '';
+  var html = '<div style="margin-top:8px">';
+  for(var i=0;i<imgs.length;i++){
+    html += '<img src="'+imgs[i]+'" onclick="openImgLightboxSrc(this.dataset.nid,'+i+')" data-nid="'+note.id+'" style="max-width:100%;border-radius:8px;border:1px solid rgba(0,0,0,.08);object-fit:contain;max-height:220px;display:block;cursor:zoom-in;margin-bottom:4px" title="Click to view full size"/>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function openImgLightbox(noteId) { openImgLightboxSrc(noteId, 0); }
+function openImgLightboxSrc(noteIdOrEl, idx) {
+  var noteId = typeof noteIdOrEl === 'string' ? noteIdOrEl : noteIdOrEl.dataset.nid;
+  var note = notesData.find(function(n){ return n.id===noteId; });
+  if(!note) return;
+  var imgs = note.images || (note.image ? [note.image] : []);
+  if(!imgs[idx]) return;
+  var bg = document.getElementById('imgLightboxBg');
+  var img = document.getElementById('imgLightboxEl');
+  img.src = imgs[idx];
   bg.style.display = 'flex';
   document.addEventListener('keydown', _lightboxKeyClose);
 }
@@ -3926,15 +3980,11 @@ if (window._pendingInit) { window._fbInit(window._pendingInit.load, window._pend
       </div>
     </div>
     <div class="frow">
-      <label>📷 Insert Image <span style="font-size:.68rem;color:var(--muted)">(optional)</span></label>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <input type="file" id="noteImgInput" accept="image/*" style="font-size:.8rem"
-          onchange="previewNoteImg(this)"/>
-        <div id="noteImgPreview" style="display:none;position:relative;max-width:100%">
-          <img id="noteImgPreviewEl" style="max-width:100%;max-height:160px;border-radius:10px;border:1px solid var(--border);object-fit:contain"/>
-          <button onclick="clearNoteImg()" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);color:#fff;border:none;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:.75rem">✕</button>
-        </div>
+      <label>📷 Images <span style="font-size:.68rem;color:var(--muted)">(optional — multiple allowed)</span></label>
+      <div id="noteImgsWrap" style="display:flex;flex-direction:column;gap:8px">
+        <!-- images injected here -->
       </div>
+      <button type="button" onclick="addNoteImgSlot()" style="margin-top:6px;background:none;border:1.5px dashed var(--border);border-radius:10px;padding:7px 14px;font-family:'Nunito',sans-serif;font-size:.78rem;color:var(--muted);cursor:pointer;width:100%;transition:all .15s" onmouseover="this.style.borderColor='var(--sage)';this.style.color='var(--sage)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">＋ Add Image</button>
     </div>
     <div class="modal-btns">
       <button class="cancel-btn" onclick="closeNoteModal()">Cancel</button>
