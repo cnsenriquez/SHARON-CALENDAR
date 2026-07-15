@@ -210,9 +210,9 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 .rfid-detail span{font-weight:700;color:var(--text);}
 
 /* MODALS */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(60,25,15,.32);backdrop-filter:blur(5px);z-index:200;align-items:center;justify-content:center;padding:14px;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(60,25,15,.32);backdrop-filter:blur(5px);z-index:200;align-items:flex-start;justify-content:center;padding:14px;overflow-x:hidden;overflow-y:auto;}
 .modal-bg.open{display:flex;}
-.modal{background:var(--surface);border-radius:22px;padding:24px 20px;width:100%;max-width:430px;box-shadow:0 20px 60px rgba(180,80,60,.2);border:1px solid var(--border);animation:popIn .25s cubic-bezier(.34,1.56,.64,1) both;position:relative;overflow:hidden;max-height:90vh;overflow-y:auto;}
+.modal{background:var(--surface);border-radius:22px;padding:24px 20px;width:100%;max-width:430px;box-shadow:0 20px 60px rgba(180,80,60,.2);border:1px solid var(--border);animation:popIn .25s cubic-bezier(.34,1.56,.64,1) both;position:relative;overflow-y:auto;overflow-x:hidden;max-height:88vh;margin:auto;}
 .modal::before{content:'🌷';position:absolute;top:-14px;right:14px;font-size:4rem;opacity:.04;pointer-events:none;}
 .modal h2{font-family:'Playfair Display',serif;font-size:1.25rem;color:var(--text);margin-bottom:2px;}
 .modal h2 em{font-style:italic;color:var(--rose);}
@@ -496,11 +496,11 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 .mon-name-hdr { background: #3d5c4a !important; color: #fff !important; font-size: .65rem !important; font-weight: 800 !important; letter-spacing: .06em; text-transform: uppercase; padding: 7px 12px !important; position: sticky; left: 0; z-index: 3; min-width: 140px; width: 140px; }
 .mon-name-cell { background: #f4f8f5; font-size: .78rem; font-weight: 600; color: var(--text); padding: 0 12px; position: sticky; left: 0; z-index: 2; border-right: 2px solid #8aaa94; height: 34px; min-width: 140px; width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Month header */
-.mon-mo-hdr { background: #3d5c4a; color: #fff; text-align: center; font-size: .68rem; font-weight: 800; padding: 7px 4px 5px; min-width: 72px; width: 72px; text-transform: uppercase; letter-spacing: .04em; }
+.mon-mo-hdr { background: #3d5c4a; color: #fff; text-align: center; font-size: .68rem; font-weight: 800; padding: 7px 8px 5px; min-width: 90px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
 /* Data cell */
-.mon-cell { text-align: center; background: #fafcfa; height: 34px; min-width: 72px; width: 72px; position: relative; cursor: pointer; }
+.mon-cell { text-align: center; background: #fafcfa; min-height: 34px; min-width: 90px; position: relative; cursor: pointer; vertical-align: top; }
 .mon-cell:hover { filter: brightness(.95); }
-.mon-cell-input { width: 72px; height: 34px; border: none; background: transparent; text-align: center; font-family: 'Nunito', sans-serif; font-size: .75rem; font-weight: 700; color: var(--text); padding: 0 4px; box-sizing: border-box; outline: none; cursor: pointer; }
+.mon-cell-input { width: 100%; min-height: 34px; height: auto; border: none; background: transparent; text-align: center; font-family: 'Nunito', sans-serif; font-size: .75rem; font-weight: 700; color: var(--text); padding: 4px 20px 4px 6px; box-sizing: border-box; outline: none; cursor: pointer; resize: none; display: block; line-height: 1.4; word-break: break-word; overflow: hidden; }
 .mon-cell-input:focus { background: #fffbe6; outline: 2px solid #c8a840; outline-offset: -2px; border-radius: 2px; cursor: text; }
 /* Color presets */
 .mon-cell.paid    { background: #c6e8d0 !important; }
@@ -520,7 +520,7 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 .mon-leg-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,.1); }
 
 /* ── Mon cell color picker ── */
-.mon-cell-wrap { position:relative; width:100%; height:100%; }
+.mon-cell-wrap { position:relative; width:100%; min-height:34px; }
 .mon-cell-color-dot { position:absolute; bottom:3px; right:3px; width:10px; height:10px; border-radius:50%; border:1.5px solid rgba(0,0,0,.15); cursor:pointer; flex-shrink:0; z-index:1; }
 .mon-color-picker-pop { position:fixed; background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 8px 28px rgba(0,0,0,.15); z-index:9999; padding:8px; display:flex; flex-wrap:wrap; gap:6px; width:148px; }
 .mon-cp-swatch { width:22px; height:22px; border-radius:6px; cursor:pointer; border:2px solid transparent; transition:transform .1s; flex-shrink:0; }
@@ -2646,8 +2646,8 @@ function saveMonSection() {
       color: color,
       rows: []
     };
-    // monthly_grouped needs groups array
     if(type === 'monthly_grouped') newTable.groups = [];
+    if(type === 'custom') newTable.customCols = window._monCustomCols || [];
     monSheet.push(newTable);
   }
   document.getElementById('monSecModalBg').classList.remove('open');
@@ -2661,6 +2661,96 @@ function deleteMonSection(si) {
 
 
 // ─── Column generators ───
+
+// ── Custom column builder in modal ──
+window._monCustomCols = []; // [{key, label, group}]
+
+function onMonTypeChange(val) {
+  document.getElementById('monCustomColsRow').style.display = val === 'custom' ? '' : 'none';
+  if(val === 'custom') window._monCustomCols = [];
+}
+
+function addMonCustomCol() {
+  const label = document.getElementById('monCustomColLabelInp').value.trim();
+  if(!label) return;
+  const group = document.getElementById('monCustomColGroupInp').value.trim() || null;
+  const key = (group ? group+'_' : '') + label + '_' + Date.now();
+  window._monCustomCols.push({ key, label, group });
+  document.getElementById('monCustomColLabelInp').value = '';
+  renderMonCustomColsList();
+}
+
+function removeMonCustomCol(idx) {
+  window._monCustomCols.splice(idx, 1);
+  renderMonCustomColsList();
+}
+
+function renderMonCustomColsList() {
+  const list = document.getElementById('monCustomColsList');
+  if(!list) return;
+  if(!window._monCustomCols.length) {
+    list.innerHTML = '<div style="font-size:.75rem;color:var(--muted);font-style:italic">No columns yet — add some above.</div>';
+    return;
+  }
+  list.innerHTML = window._monCustomCols.map((c, i) =>
+    '<div style="display:flex;align-items:center;gap:8px;background:#f4f8f5;border-radius:8px;padding:5px 10px">' +
+    '<span style="font-size:.72rem;font-weight:700;color:var(--text)">' + esc(c.label) + '</span>' +
+    (c.group ? '<span style="font-size:.65rem;color:var(--muted)">(' + esc(c.group) + ')</span>' : '') +
+    '<button type="button" onclick="removeMonCustomCol('+i+')" style="margin-left:auto;background:none;border:none;color:#b0b0b0;cursor:pointer;font-size:.7rem">✕</button>' +
+    '</div>'
+  ).join('');
+}
+
+// Also allow editing existing custom table's columns
+function openEditCustomCols(ti) {
+  const tbl = monSheet[ti];
+  if(!tbl || tbl.type !== 'custom') return;
+  window._editCustomColsTi = ti;
+  window._monCustomCols = JSON.parse(JSON.stringify(tbl.customCols || []));
+  document.getElementById('monCustomColsEditTitle').textContent = 'Edit columns: ' + (tbl.title||tbl.label||'');
+  renderMonCustomColsEdit();
+  document.getElementById('monCustomColsEditBg').classList.add('open');
+}
+
+function addMonCustomColEdit() {
+  const label = document.getElementById('monCustomColEditLabelInp').value.trim();
+  if(!label) return;
+  const group = document.getElementById('monCustomColEditGroupInp').value.trim() || null;
+  const key = (group ? group+'_' : '') + label + '_' + Date.now();
+  window._monCustomCols.push({ key, label, group });
+  document.getElementById('monCustomColEditLabelInp').value = '';
+  renderMonCustomColsEdit();
+}
+
+function renderMonCustomColsEdit() {
+  const list = document.getElementById('monCustomColsEditList');
+  if(!list) return;
+  if(!window._monCustomCols.length) {
+    list.innerHTML = '<div style="font-size:.75rem;color:var(--muted);font-style:italic">No columns yet.</div>';
+    return;
+  }
+  list.innerHTML = window._monCustomCols.map((c, i) =>
+    '<div style="display:flex;align-items:center;gap:8px;background:#f4f8f5;border-radius:8px;padding:6px 10px">' +
+    '<span style="font-size:.74rem;font-weight:700;color:var(--text)">' + esc(c.label) + '</span>' +
+    (c.group ? '<span style="font-size:.66rem;color:var(--muted)">(' + esc(c.group) + ')</span>' : '') +
+    '<button type="button" onclick="removeMonCustomColEdit('+i+')" style="margin-left:auto;background:none;border:none;color:#b0b0b0;cursor:pointer;font-size:.72rem">✕</button>' +
+    '</div>'
+  ).join('');
+}
+
+function removeMonCustomColEdit(idx) {
+  window._monCustomCols.splice(idx, 1);
+  renderMonCustomColsEdit();
+}
+
+function saveMonCustomColsEdit() {
+  const ti = window._editCustomColsTi;
+  if(ti === undefined) return;
+  monSheet[ti].customCols = window._monCustomCols;
+  document.getElementById('monCustomColsEditBg').classList.remove('open');
+  saveMonSheet(); renderMonSpreadsheet();
+}
+
 function getMonCols(tbl) {
   if(tbl.type === 'monthly') return MON_MONTHS.map(m => ({key:m, label:m, group:null}));
   if(tbl.type === 'bimonthly') {
@@ -2694,6 +2784,14 @@ function getMonCols(tbl) {
   }
   if(tbl.type === 'monthly_grouped') {
     return MON_MONTHS.map(m => ({key:m, label:m, group:null}));
+  }
+  if(tbl.type === 'custom') {
+    // customCols: [{key, label, group}] — user-defined
+    return (tbl.customCols || []).map(c => ({
+      key: c.key || c.label,
+      label: c.label,
+      group: c.group || null
+    }));
   }
   return MON_MONTHS.map(m => ({key:m, label:m, group:null}));
 }
@@ -2746,6 +2844,12 @@ function renameMonRowById(e, rowId, ti, grpEncoded) {
     if(e.key === 'Enter') inp.blur();
     if(e.key === 'Escape') { inp.value = origName; inp.blur(); }
   });
+}
+
+
+function autoResizeMonCell(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.max(34, el.scrollHeight) + 'px';
 }
 
 function monCellSaveById(inp, ti, rowId, key, grpEncoded) {
@@ -2962,13 +3066,14 @@ function buildDataRow(row, cols, ti, ri, groupLabel) {
     const dotStyle = bgColor ? `background:${bgColor};filter:brightness(.75)` : 'background:#d0d8d4';
     cells += `<td class="mon-cell${cls?' '+cls:''}" data-ti="${ti}" data-rowid="${rowId}" data-key="${col.key}" data-grp="${grpStr}" style="${bgStyle}">
       <div class="mon-cell-wrap">
-        <input type="text" class="mon-cell-input" value="${esc(val)}" placeholder=""
-          onfocus="this.select()"
+        <textarea class="mon-cell-input" rows="1"
+          onfocus="this.select();autoResizeMonCell(this)"
+          oninput="autoResizeMonCell(this)"
           onblur="monCellSaveById(this,${ti},'${rowId}','${col.key}','${grpStr}')"
-          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.dataset.orig||'';this.blur();}"
+          onkeydown="if(event.key==='Escape'){this.value=this.dataset.orig||'';this.blur();}"
           data-orig="${esc(val)}"
-          style="padding-right:16px"
-        />
+          style="padding-right:20px"
+        >${esc(val)}</textarea>
         <div class="mon-cell-color-dot" style="${dotStyle}"
           onclick="event.stopPropagation();openMonColorPickerById(event,${ti},'${rowId}','${col.key}','${grpStr}',this)"
           title="Right-click cell or click dot for color"></div>
@@ -2991,10 +3096,13 @@ function renderSingleTable(wrap, tbl, ti) {
   const secTd = secRow.insertCell();
   secTd.colSpan = 1 + cols.length;
   secTd.style.background = tbl.color;
+  const editColsBtn = tbl.type === 'custom'
+    ? `<button class="mon-sec-add-row" onclick="openEditCustomCols(${ti})" title="Edit columns">🗂 Cols</button>` : '';
   secTd.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between">
     <span>${esc(tbl.title)}</span>
     <div style="display:flex;gap:5px">
       <button class="mon-sec-add-row" onclick="addMonRow(${ti},null)">＋ Row</button>
+      ${editColsBtn}
       <button class="mon-sec-add-row" onclick="deleteMonTable(${ti})" style="background:rgba(255,80,80,.3)">🗑</button>
     </div>
   </div>`;
@@ -3011,6 +3119,11 @@ function renderSingleTable(wrap, tbl, ti) {
   });
   tblEl.appendChild(tbody);
   secWrap.appendChild(tblEl);
+
+  // Auto-resize all textareas after render
+  setTimeout(() => {
+    secWrap.querySelectorAll('.mon-cell-input').forEach(autoResizeMonCell);
+  }, 0);
 
   // Context menu delegation
   secWrap.addEventListener('contextmenu', e => {
@@ -3741,6 +3854,29 @@ function confirmPrintDrv() {
   <img id="imgLightboxEl" style="max-width:95vw;max-height:92vh;border-radius:12px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,.5)"/>
   <button onclick="closeImgLightbox()" style="position:fixed;top:16px;right:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1.4rem;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">✕</button>
 </div>
+
+<!-- EDIT CUSTOM COLS MODAL -->
+<div class="modal-bg" id="monCustomColsEditBg" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:400px" onclick="event.stopPropagation()">
+    <h2 id="monCustomColsEditTitle">Edit <em>Columns</em></h2>
+    <div id="monCustomColsEditList" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;margin-bottom:12px;padding:2px 0"></div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+      <input id="monCustomColEditGroupInp" type="text" placeholder="Group (optional, e.g. January)"
+        style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:.82rem"/>
+      <div style="display:flex;gap:6px">
+        <input id="monCustomColEditLabelInp" type="text" placeholder="Column name"
+          style="flex:1;min-width:0;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:.82rem"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addMonCustomColEdit();}"/>
+        <button type="button" onclick="addMonCustomColEdit()"
+          style="background:var(--sage);color:#fff;border:none;border-radius:10px;padding:8px 18px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:800;cursor:pointer;flex-shrink:0">＋</button>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="cancel-btn" onclick="document.getElementById('monCustomColsEditBg').classList.remove('open')">Cancel</button>
+      <button class="save-btn" onclick="saveMonCustomColsEdit()">Save Columns ✦</button>
+    </div>
+  </div>
+</div>
 </body></html>`;
 
   const win = window.open('','_blank','width=800,height=900');
@@ -4023,7 +4159,7 @@ if (window._pendingInit) { window._fbInit(window._pendingInit.load, window._pend
 </div>
 
 <!-- MON SECTION MODAL -->
-<div class="modal-bg" id="monSecModalBg" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="modal-bg" id="monSecModalBg" style="align-items:center" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="modal" style="max-width:340px" onclick="event.stopPropagation()">
     <h2>New <em>Section</em></h2>
     <div class="frow">
@@ -4050,12 +4186,31 @@ if (window._pendingInit) { window._fbInit(window._pendingInit.load, window._pend
     </div>
     <div class="frow" id="monSecTypeRow">
       <label>Column Type</label>
-      <select id="monSecTypeInp" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:.82rem;background:#fff;color:var(--text)">
+      <select id="monSecTypeInp" onchange="onMonTypeChange(this.value)"
+        style="padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:.82rem;background:#fff;color:var(--text)">
         <option value="monthly">Monthly (Jan–Dec)</option>
         <option value="quarterly">Quarterly (Jan-Mar, Apr-Jun…)</option>
         <option value="bimonthly">Bi-monthly (15 & 30 per month)</option>
         <option value="weekly">Weekly (date ranges)</option>
+        <option value="custom">Custom (define your own columns)</option>
       </select>
+    </div>
+    <!-- Custom columns builder — shown only when type=custom -->
+    <div id="monCustomColsRow" style="display:none">
+      <label style="font-size:.65rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px">Custom Columns</label>
+      <div id="monCustomColsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <input id="monCustomColGroupInp" type="text" placeholder="Group label (optional, e.g. January)"
+          style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:.82rem"/>
+        <div style="display:flex;gap:6px">
+          <input id="monCustomColLabelInp" type="text" placeholder="Column name (e.g. 15, 30, Week 1)"
+            style="flex:1;min-width:0;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:.82rem"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addMonCustomCol();}"/>
+          <button type="button" onclick="addMonCustomCol()"
+            style="background:var(--sage);color:#fff;border:none;border-radius:10px;padding:8px 18px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0">＋ Add</button>
+        </div>
+      </div>
+      <div style="font-size:.68rem;color:var(--muted);margin-top:5px">Enter group (optional) then column name → press Enter or ＋</div>
     </div>
     <div class="modal-btns">
       <button class="cancel-btn" onclick="document.getElementById('monSecModalBg').classList.remove('open')">Cancel</button>
@@ -4081,6 +4236,29 @@ if (window._pendingInit) { window._fbInit(window._pendingInit.load, window._pend
 <div id="imgLightboxBg" onclick="closeImgLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out;padding:20px">
   <img id="imgLightboxEl" style="max-width:95vw;max-height:92vh;border-radius:12px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,.5)"/>
   <button onclick="closeImgLightbox()" style="position:fixed;top:16px;right:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:1.4rem;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">✕</button>
+</div>
+
+<!-- EDIT CUSTOM COLS MODAL -->
+<div class="modal-bg" id="monCustomColsEditBg" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" style="max-width:400px" onclick="event.stopPropagation()">
+    <h2 id="monCustomColsEditTitle">Edit <em>Columns</em></h2>
+    <div id="monCustomColsEditList" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;margin-bottom:12px;padding:2px 0"></div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+      <input id="monCustomColEditGroupInp" type="text" placeholder="Group (optional, e.g. January)"
+        style="width:100%;box-sizing:border-box;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:.82rem"/>
+      <div style="display:flex;gap:6px">
+        <input id="monCustomColEditLabelInp" type="text" placeholder="Column name"
+          style="flex:1;min-width:0;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:.82rem"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addMonCustomColEdit();}"/>
+        <button type="button" onclick="addMonCustomColEdit()"
+          style="background:var(--sage);color:#fff;border:none;border-radius:10px;padding:8px 18px;font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:800;cursor:pointer;flex-shrink:0">＋</button>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="cancel-btn" onclick="document.getElementById('monCustomColsEditBg').classList.remove('open')">Cancel</button>
+      <button class="save-btn" onclick="saveMonCustomColsEdit()">Save Columns ✦</button>
+    </div>
+  </div>
 </div>
 </body>
 </html>
