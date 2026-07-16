@@ -490,7 +490,8 @@ header{text-align:center;margin-bottom:20px;animation:fadeDown .5s ease both;}
 .mon-sheet-wrap:first-child .mon-sec-hdr-bar,
 .mon-sheet-wrap .mon-sec-hdr-bar { border-radius: 10px 10px 0 0; }
 /* ══ MONITORING SPREADSHEET ══ */
-.mon-sheet-wrap { overflow-x: auto; border-radius: 14px; border: 1.5px solid var(--border); box-shadow: 0 4px 18px var(--sh); margin-bottom: 20px; }
+.mon-sheet-wrap { overflow-x: visible; border-radius: 14px; border: 1.5px solid var(--border); box-shadow: 0 4px 18px var(--sh); margin-bottom: 20px; }
+.mon-table-scroll { overflow-x: auto; border-radius: 0 0 14px 14px; }
 .mon-sheet { border-collapse: collapse; font-size: .78rem; background: #fff; width: max-content; min-width: 100%; }
 .mon-sheet td, .mon-sheet th { border: 1px solid #d0dbd5; padding: 0; }
 /* Section header row */
@@ -3172,7 +3173,11 @@ function renderSingleTable(wrap, tbl, ti) {
     tbody.innerHTML += rowHtml;
   });
   tblEl.appendChild(tbody);
-  secWrap.appendChild(tblEl);
+  // Wrap only the TABLE in scroll div — title stays fixed above
+  const tableScroll = document.createElement('div');
+  tableScroll.className = 'mon-table-scroll';
+  tableScroll.appendChild(tblEl);
+  secWrap.appendChild(tableScroll);
 
   // Auto-resize all textareas after render
   setTimeout(() => {
@@ -3227,7 +3232,10 @@ function renderGroupedTable(wrap, tbl, ti) {
       tbody.innerHTML += buildDataRow(row, cols, ti, ri, grp.label);
     });
     tblEl.appendChild(tbody);
-    secWrap.appendChild(tblEl);
+    const tableScroll2 = document.createElement('div');
+    tableScroll2.className = 'mon-table-scroll';
+    tableScroll2.appendChild(tblEl);
+    secWrap.appendChild(tableScroll2);
 
     secWrap.addEventListener('contextmenu', e => {
       e.preventDefault();
